@@ -1,6 +1,5 @@
 package com.musicfinder.server.model;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Data // Tự sinh: Getter, Setter, toString, equals, hashCode
 @NoArgsConstructor
-@AllArgsConstructor 
+@AllArgsConstructor
 @Builder
 
 public class Songs {
@@ -23,6 +22,7 @@ public class Songs {
     private String videoUrl;
     private String thumbnailUrl;
     private Long searchCount;
+    private String previewUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -5,6 +5,7 @@ import java.util.Optional;
 import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
 import com.musicfinder.server.service.HistoryService;
+import com.musicfinder.server.service.SearchService;
 import com.musicfinder.server.service.StatisticsService;
 import com.musicfinder.shared.enums.Status;
 import com.musicfinder.shared.request.Request;
@@ -14,8 +15,10 @@ import com.musicfinder.shared.request.payload.EditProfilePayload;
 import com.musicfinder.shared.request.payload.LoginPayload;
 import com.musicfinder.shared.request.payload.RegisterPayload;
 import com.musicfinder.shared.request.payload.RemoveRowSearchHistory;
+import com.musicfinder.shared.request.payload.SearchPayload;
 import com.musicfinder.shared.request.payload.StatisticsPayload;
 import com.musicfinder.shared.response.Response;
+import com.musicfinder.shared.response.payload.SearchSongData;
 import com.musicfinder.shared.response.payload.UserData;
 import com.musicfinder.shared.response.payload.ViewArtistDetailData;
 import com.musicfinder.shared.response.payload.ViewArtistSongsData;
@@ -28,6 +31,7 @@ public class RequestDispatcher {
     private final ArtistService artistService = new ArtistService();
     private final HistoryService historyService = new HistoryService();
     private final AuthService authService = new AuthService();
+    private final SearchService searchService = new SearchService();
 
     public Response handle(String json) {
         return handle(json, null);
@@ -133,6 +137,14 @@ public class RequestDispatcher {
                     }
                     historyService.clearHistory(userId);
                     return Response.success(request, null);
+
+                case SEARCH_SONG: {
+                    SearchPayload payload = request.dataAs(SearchPayload.class);
+
+                    SearchSongData data = searchService.searchSongs(payload.keyword(), userId);
+
+                    return Response.success(request, data);
+                }
 
                 // Các action khác sẽ thêm dần ở đây:
                 // case SEARCH_SONG: return searchHandler.searchSong(request);
