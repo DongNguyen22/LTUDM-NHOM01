@@ -5,11 +5,13 @@ import com.musicfinder.server.exception.DataException;
 import com.musicfinder.server.model.Songs;
 import lombok.extern.slf4j.Slf4j;
 import com.musicfinder.server.util.TextNormalizer;
+import com.musicfinder.shared.response.payload.SongData;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Arrays;
 
 @Slf4j
 public class SongRepository {
@@ -196,6 +198,45 @@ public class SongRepository {
         } catch (SQLException e) {
             log.error("Lỗi truy vấn CSDL khi tìm bài hát theo playlist_id [{}]: {}", playlistId, e.getMessage(), e);
             throw new DataException("Lỗi truy vấn CSDL khi tìm bài hát theo playlist_id " + playlistId, e);
+        }
+    }
+
+    public List<SongData> findSongDataByPlaylistId(Long playlistId) {
+        List<SongData> list = new ArrayList<>();
+        String sql = "SELECT s.*, STRING_AGG(a.name, ', ' ORDER BY a.name) AS artist_names "
+                + "FROM SONGS s "
+                + "JOIN PLAYLIST_SONGS ps ON s.song_id = ps.song_id "
+                + "LEFT JOIN SONG_ARTISTS sa ON s.song_id = sa.song_id "
+                + "LEFT JOIN ARTISTS a ON sa.artist_id = a.artist_id "
+                + "WHERE ps.playlist_id = ? "
+                + "GROUP BY s.song_id, ps.position "
+                + "ORDER BY ps.position ASC";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, playlistId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String artistsStr = rs.getString("artist_names");
+                    List<String> artistNames = (artistsStr != null && !artistsStr.isBlank())
+                            ? Arrays.asList(artistsStr.split(", "))
+                            : List.of();
+                    list.add(new SongData(
+                            rs.getLong("song_id"),
+                            rs.getString("title"),
+                            rs.getString("composer"),
+                            artistNames,
+                            rs.getInt("duration_seconds"),
+                            rs.getString("audio_url"),
+                            rs.getString("video_url"),
+                            rs.getString("thumbnail_url"),
+                            rs.getLong("search_count"),
+                        null));
+                }
+            }
+            return list;
+        } catch (SQLException e) {
+            log.error("Lỗi khi lấy bài hát kèm ca sĩ theo playlist [{}]: {}", playlistId, e.getMessage(), e);
+            throw new DataException("Lỗi truy vấn danh sách bài hát trong playlist", e);
         }
     }
 

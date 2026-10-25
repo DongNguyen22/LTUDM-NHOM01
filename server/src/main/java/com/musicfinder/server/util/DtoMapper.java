@@ -1,8 +1,12 @@
 package com.musicfinder.server.util;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.musicfinder.server.model.*;
+import com.musicfinder.server.repository.ArtistRepository;
+import com.musicfinder.shared.enums.PlayList_Type;
+import com.musicfinder.shared.request.payload.Add_RemoveToPlaylistPayload;
 import com.musicfinder.shared.response.payload.*;
 
 // Đổi Entity (model của DB) sang DTO (payload gửi cho Client).
@@ -41,4 +45,31 @@ public class DtoMapper {
                 a.getEmail(),
                 a.getAvatarUrl());
     }
+
+    public static List<SongData> toSongDataList(List<Songs> songs, ArtistRepository artistRepo) {
+        List<SongData> result = new ArrayList<>();
+        for (Songs song : songs) {
+            List<String> artistNames = artistRepo.findAllArtistByASongId(song.getSongId())
+                    .stream()
+                    .map(Artists::getArtistName)
+                    .toList();
+            result.add(toSongData(song, artistNames));
+        }
+        return result;
+    }
+
+    public static PlayListData toPlayListData(Playlists p) {
+        if (p == null)
+            return null;
+        PlayList_Type type = (p.getType() != null)
+                ? PlayList_Type.valueOf(p.getType())
+                : PlayList_Type.NORMAL;
+        return new PlayListData(
+                p.getPlaylistId(),
+                p.getName(),
+                p.getDescription(),
+                type);
+    }
+
+  
 }

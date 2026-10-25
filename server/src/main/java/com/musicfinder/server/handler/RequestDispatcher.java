@@ -5,17 +5,20 @@ import java.util.Optional;
 import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
 import com.musicfinder.server.service.HistoryService;
+import com.musicfinder.server.service.PlayListService;
 import com.musicfinder.server.service.SearchService;
 import com.musicfinder.server.service.StatisticsService;
 import com.musicfinder.shared.enums.Status;
 import com.musicfinder.shared.request.Request;
+import com.musicfinder.shared.request.payload.Add_RemoveToPlaylistPayload;
 import com.musicfinder.shared.request.payload.ArtistPayload;
 import com.musicfinder.shared.request.payload.ChangePasswordProfilePayload;
+import com.musicfinder.shared.request.payload.Create_UpdateToPlaylistPayload;
 import com.musicfinder.shared.request.payload.EditProfilePayload;
 import com.musicfinder.shared.request.payload.LoginPayload;
 import com.musicfinder.shared.request.payload.RegisterPayload;
 import com.musicfinder.shared.request.payload.RemoveRowSearchHistory;
-import com.musicfinder.shared.request.payload.SearchPayload;
+import com.musicfinder.shared.request.payload.Remove_OpenPlaylistPayload;
 import com.musicfinder.shared.request.payload.StatisticsPayload;
 import com.musicfinder.shared.response.Response;
 import com.musicfinder.shared.response.payload.SearchSongData;
@@ -31,7 +34,7 @@ public class RequestDispatcher {
     private final ArtistService artistService = new ArtistService();
     private final HistoryService historyService = new HistoryService();
     private final AuthService authService = new AuthService();
-    private final SearchService searchService = new SearchService();
+    private final PlayListService playListService = new PlayListService();
 
     public Response handle(String json) {
         return handle(json, null);
@@ -138,14 +141,96 @@ public class RequestDispatcher {
                     historyService.clearHistory(userId);
                     return Response.success(request, null);
 
-                case SEARCH_SONG: {
-                    SearchPayload payload = request.dataAs(SearchPayload.class);
-
-                    SearchSongData data = searchService.searchSongs(payload.keyword(), userId);
-
-                    return Response.success(request, data);
+                // ===============PLAYLIST========================
+                case CREATE_PLAYLIST: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Create_UpdateToPlaylistPayload payload = request.dataAs(Create_UpdateToPlaylistPayload.class);
+                    return Response.success(request, playListService.createPlaylist(userId, payload));
                 }
 
+                case GET_PLAYLISTS:
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    return Response.success(request, playListService.getPlaylists(userId));
+
+                case EDIT_FROM_PLAYLIST: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Create_UpdateToPlaylistPayload payload = request.dataAs(Create_UpdateToPlaylistPayload.class);
+                    boolean ok = playListService.editPlaylist(userId, payload);
+                    return ok ? Response.success(request, "Cập nhật playlist thành công")
+                            : Response.error(request, Status.ERROR, "Cập nhật thất bại");
+                }
+
+                case DELETE_PLAYLIST: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Remove_OpenPlaylistPayload payload = request.dataAs(Remove_OpenPlaylistPayload.class);
+                    boolean ok = playListService.deletePlaylist(userId, payload);
+                    return ok ? Response.success(request, "Đã xóa playlist")
+                            : Response.error(request, Status.ERROR, "Xóa playlist thất bại");
+                }
+
+                case GET_PLAYLIST_SONGS: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Remove_OpenPlaylistPayload payload = request.dataAs(Remove_OpenPlaylistPayload.class);
+                    return Response.success(request, playListService.getPlaylistSongs(userId, payload));
+                }
+
+                case ADD_TO_PLAYLIST: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Add_RemoveToPlaylistPayload payload = request.dataAs(Add_RemoveToPlaylistPayload.class);
+                    boolean added = playListService.addSongToPlaylist(userId, payload);
+                    return added ? Response.success(request, "Đã thêm bài hát vào playlist")
+                            : Response.error(request, Status.ERROR, "Bài hát đã có trong playlist hoặc thêm thất bại");
+                }
+
+                case REMOVE_FROM_PLAYLIST: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Add_RemoveToPlaylistPayload payload = request.dataAs(Add_RemoveToPlaylistPayload.class);
+                    boolean removed = playListService.removeSongFromPlaylist(userId, payload);
+
+                    return removed ? Response.success(request, "Đã xoá bài hát trong playlist")
+                            : Response.error(request, Status.ERROR, "Xoá thất bại");
+                }
+
+                case GET_FAVORITES:
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    return Response.success(request, playListService.getFavorites(userId));
+
+                case ADD_FAVORITE: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Add_RemoveToPlaylistPayload payload = request.dataAs(Add_RemoveToPlaylistPayload.class);
+                    boolean added = playListService.addFavorite(userId, payload);
+
+                    return added ? Response.success(request, "Đã thêm bài hát vào danh sách yêu thích")
+                            : Response.error(request, Status.ERROR, "Thêm thất bại");
+                }
+
+                case REMOVE_FAVORITE: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    Add_RemoveToPlaylistPayload payload = request.dataAs(Add_RemoveToPlaylistPayload.class);
+                    boolean removed = playListService.removeFavorite(userId, payload);
+                    return removed ? Response.success(request, "Đã xoá bài hát thành công")
+                            : Response.error(request, Status.ERROR, "Xoá thất bại");
+                }
                 // Các action khác sẽ thêm dần ở đây:
                 // case SEARCH_SONG: return searchHandler.searchSong(request);
 
