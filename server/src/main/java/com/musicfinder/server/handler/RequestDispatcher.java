@@ -15,6 +15,7 @@ import com.musicfinder.shared.request.payload.ArtistPayload;
 import com.musicfinder.shared.request.payload.ChangePasswordProfilePayload;
 import com.musicfinder.shared.request.payload.Create_UpdateToPlaylistPayload;
 import com.musicfinder.shared.request.payload.EditProfilePayload;
+import com.musicfinder.shared.request.payload.SearchPayload;
 import com.musicfinder.shared.request.payload.LoginPayload;
 import com.musicfinder.shared.request.payload.RegisterPayload;
 import com.musicfinder.shared.request.payload.RemoveRowSearchHistory;
@@ -35,6 +36,7 @@ public class RequestDispatcher {
     private final HistoryService historyService = new HistoryService();
     private final AuthService authService = new AuthService();
     private final PlayListService playListService = new PlayListService();
+    private final SearchService searchService = new SearchService();
 
     public Response handle(String json) {
         return handle(json, null);
@@ -140,6 +142,14 @@ public class RequestDispatcher {
                     }
                     historyService.clearHistory(userId);
                     return Response.success(request, null);
+
+                case SEARCH_SONG: {
+                    SearchPayload payload = request.dataAs(SearchPayload.class);
+
+                    SearchSongData data = searchService.searchSongs(payload.keyword(), userId);
+
+                    return Response.success(request, data);
+                }
 
                 // ===============PLAYLIST========================
                 case CREATE_PLAYLIST: {

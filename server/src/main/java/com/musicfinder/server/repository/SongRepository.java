@@ -230,7 +230,7 @@ public class SongRepository {
                             rs.getString("video_url"),
                             rs.getString("thumbnail_url"),
                             rs.getLong("search_count"),
-                        null));
+                            rs.getString("preview_url")));
                 }
             }
             return list;
