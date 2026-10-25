@@ -50,21 +50,37 @@ public class HistoryService {
     // Ghi 1 lượt tìm kiếm. SearchService sẽ gọi hàm này sau mỗi lần SEARCH_SONG /
     // SEARCH_ARTIST
     public void recordSearch(Long userId, String keyword, String searchType, int resultCount) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("ID người dùng không hợp lệ");
+        }
+
         if (keyword == null || keyword.isBlank()) {
             throw new IllegalArgumentException("Từ khóa không được để trống");
         }
+
+        if (!"SONG".equals(searchType) && !"ARTIST".equals(searchType)) {
+            throw new IllegalArgumentException("Loại tìm kiếm không hợp lệ");
+        }
+
+        if (resultCount < 0) {
+            throw new IllegalArgumentException("Số kết quả không được âm");
+        }
+
         String cleanKeyword = keyword.trim();
+
         if (cleanKeyword.length() > MAX_KEYWORD_LENGTH) {
             cleanKeyword = cleanKeyword.substring(0, MAX_KEYWORD_LENGTH);
-
-            SearchHistory history = SearchHistory.builder()
-                    .userId(userId)
-                    .keyword(cleanKeyword)
-                    .normalizedKeyword(TextNormalizer.normalize(cleanKeyword))
-                    .searchType(searchType) // "SONG" hoặc "ARTIST"
-                    .resultCount(resultCount)
-                    .build();
-            historyRepo.save(history);
         }
+
+        SearchHistory history = SearchHistory.builder()
+                .userId(userId)
+                .keyword(cleanKeyword)
+                .normalizedKeyword(
+                        TextNormalizer.normalize(cleanKeyword))
+                .searchType(searchType)
+                .resultCount(resultCount)
+                .build();
+
+        historyRepo.save(history);
     }
 }
