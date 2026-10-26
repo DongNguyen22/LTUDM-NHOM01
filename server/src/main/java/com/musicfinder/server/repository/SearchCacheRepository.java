@@ -1,7 +1,7 @@
 package com.musicfinder.server.repository;
 
 import com.musicfinder.server.config.DatabaseConfig;
-import com.musicfinder.server.exception.DataException;
+import com.musicfinder.server.util.DataException;
 import com.musicfinder.server.model.SearchCache;
 import lombok.extern.slf4j.Slf4j;
 

@@ -90,7 +90,7 @@ public class AuthService {
         if (payload.fullName() != null && !payload.fullName().isBlank()) {
             user.setFullName(payload.fullName().trim());
         }
-        if (payload.email() != null || !payload.email().isBlank()) {
+        if (payload.email() != null && !payload.email().isBlank()) {
             String newEmail = payload.email();
             if (userRepository.existByEmail(newEmail) && !newEmail.equals(user.getEmail()))
                 throw new IllegalArgumentException("Email đã tồn tại!");

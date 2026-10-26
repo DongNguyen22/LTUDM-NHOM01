@@ -3,7 +3,7 @@ package com.musicfinder.server.service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import com.musicfinder.server.exception.DataException;
+import com.musicfinder.server.util.DataException;
 import com.musicfinder.server.model.SearchCache;
 import com.musicfinder.server.repository.SearchCacheRepository;
 import com.musicfinder.server.util.TextNormalizer;

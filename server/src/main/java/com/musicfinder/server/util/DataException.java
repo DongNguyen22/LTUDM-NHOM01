@@ -1,4 +1,4 @@
-package com.musicfinder.server.exception;
+package com.musicfinder.server.util;
 
 public class DataException extends RuntimeException {
     public DataException(String message) {
