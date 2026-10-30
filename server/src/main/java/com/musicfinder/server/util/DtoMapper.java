@@ -40,6 +40,7 @@ public class DtoMapper {
 
     public static UserData toUserData(Users a) {
         return new UserData(
+                a.getUserId(),
                 a.getUsername(),
                 a.getFullName(),
                 a.getEmail(),

@@ -1,7 +1,9 @@
 package com.musicfinder.server.network;
 
 import com.musicfinder.server.handler.RequestDispatcher;
+import com.musicfinder.shared.enums.Action;
 import com.musicfinder.shared.response.Response;
+import com.musicfinder.shared.response.payload.UserData;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -17,6 +19,7 @@ public class ClientHandler implements Runnable {
 
     private final Socket socket;
     private final RequestDispatcher dispatcher;
+    private Long currentUserId = null; // lưu userid của user trong phiên 
 
     public ClientHandler(Socket socket, RequestDispatcher dispatcher) {
         this.socket = socket;
@@ -42,7 +45,17 @@ public class ClientHandler implements Runnable {
                     System.out.println("Client " + client + " yêu cầu đóng kết nối.");
                     break;
                 }
-                Response response = dispatcher.handle(line);
+                Response response = dispatcher.handle(line,currentUserId);
+            //Nếu user Đăng nhập thành công hay đăng ký thì gửi userId về cho server
+                if(response.isSuccess() && response.getData() != null){
+                  if(response.getAction() == Action.LOGIN || response.getAction() == Action.REGISTER){
+                    UserData user =  response.dataAs(UserData.class);
+                    if(user != null && user.userId() != null){
+                        currentUserId = user.userId();
+                    }
+                  }
+                }
+
                 writer.println(response.toJson());
             }
         } catch (SocketTimeoutException e) {
