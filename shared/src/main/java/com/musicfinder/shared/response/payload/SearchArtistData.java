@@ -2,6 +2,8 @@ package com.musicfinder.shared.response.payload;
 
 import java.util.List;
 
-public record SearchArtistData(List<ArtistData> artists) {
-
+public record SearchArtistData(List<ArtistData> artists, List<ArtistData> suggestions) {
+    public SearchArtistData(List<ArtistData> artists) {
+        this(artists, List.of());
+    }
 }

@@ -2,6 +2,8 @@ package com.musicfinder.server.service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.musicfinder.server.util.DataException;
 import com.musicfinder.server.model.SearchCache;
@@ -13,9 +15,11 @@ import com.musicfinder.shared.util.Json;
 
 public class CacheService {
     private final SearchCacheRepository cacheRepo;
+    private final Map<String, String> values = new HashMap<>();
+    private final Map<String, Long> expires = new HashMap<>();
 
     public CacheService() {
-        this(new SearchCacheRepository());
+        this(null);
     }
 
     CacheService(SearchCacheRepository cacheRepo) {
@@ -23,10 +27,21 @@ public class CacheService {
     }
 
     public String createKey(String s, String type) {
-        return "server1:itunes:VN:" + type + ":" + TextNormalizer.normalize(s);
+        return "server1:youtube:db:" + type + ":" + TextNormalizer.normalize(s);
     }
 
-    private String getJson(String s, String type) {
+    private synchronized String getJson(String s, String type) {
+        if (cacheRepo == null) {
+            String key = createKey(s, type);
+            Long end = expires.get(key);
+            if (end == null)
+                return null;
+            if (end <= System.currentTimeMillis()) {
+                remove(s, type);
+                return null;
+            }
+            return values.get(key);
+        }
         try {
             Optional<SearchCache> found = cacheRepo.findByCacheKey(createKey(s, type));
             if (found.isEmpty()) {
@@ -100,9 +115,40 @@ public class CacheService {
         save(s, "ARTIST", data, seconds);
     }
 
-    private void save(String s, String type, Object data, int seconds) {
+    public <T> T getValue(String s, String type, Class<T> cls) {
+        String json = getJson(s, type);
+        if (json == null)
+            return null;
+        try {
+            return Json.fromJson(json, cls);
+        } catch (IllegalArgumentException e) {
+            remove(s, type);
+            return null;
+        }
+    }
+
+    public void putValue(String s, String type, Object data, int seconds) {
+        save(s, type, data, seconds);
+    }
+
+    public synchronized void remove(String s, String type) {
+        values.remove(createKey(s, type));
+        expires.remove(createKey(s, type));
+    }
+
+    private synchronized void save(String s, String type, Object data, int seconds) {
         if (seconds <= 0) {
             throw new IllegalArgumentException("Thời gian cache phải lớn hơn 0");
+        }
+        if (cacheRepo == null) {
+            String key = createKey(s, type);
+            if (values.size() >= 512 && !values.containsKey(key)) {
+                values.clear();
+                expires.clear();
+            }
+            values.put(key, Json.toJson(data));
+            expires.put(key, System.currentTimeMillis() + seconds * 1000L);
+            return;
         }
         try {
             SearchCache cache = SearchCache.builder()

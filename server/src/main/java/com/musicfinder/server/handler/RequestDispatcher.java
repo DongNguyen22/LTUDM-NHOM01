@@ -2,6 +2,12 @@ package com.musicfinder.server.handler;
 
 import java.util.Optional;
 
+import com.musicfinder.server.api.YtDlpApi;
+import com.musicfinder.server.service.CacheService;
+import com.musicfinder.shared.request.payload.SongPayload;
+import com.musicfinder.shared.response.payload.SongData;
+import com.musicfinder.shared.response.payload.SearchArtistData;
+
 import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
 import com.musicfinder.server.service.HistoryService;
@@ -32,11 +38,21 @@ public class RequestDispatcher {
     // Service tạo 1 lần, dùng chung cho mọi Client (service không giữ dữ liệu riêng
     // của request)
     private final StatisticsService statisticsService = new StatisticsService();
-    private final ArtistService artistService = new ArtistService();
+    private final ArtistService artistService;
     private final HistoryService historyService = new HistoryService();
     private final AuthService authService = new AuthService();
     private final PlayListService playListService = new PlayListService();
-    private final SearchService searchService = new SearchService();
+    private final SearchService searchService;
+    private final CacheService cacheService = new CacheService();
+
+    public RequestDispatcher() {
+        this(new YtDlpApi());
+    }
+
+    public RequestDispatcher(YtDlpApi api) {
+        searchService = new SearchService(api, cacheService);
+        artistService = new ArtistService(cacheService, api, searchService);
+    }
 
     public Response handle(String json) {
         return handle(json, null);
@@ -60,6 +76,8 @@ public class RequestDispatcher {
             switch (request.getAction()) {
                 case PING:
                     return Response.success(request, "PONG");
+                case LOGOUT:
+                    return Response.success(request, null);
 
                 // ======= AUTH ========
                 case REGISTER: {
@@ -148,6 +166,18 @@ public class RequestDispatcher {
 
                     SearchSongData data = searchService.searchSongs(payload.keyword(), userId);
 
+                    return Response.success(request, data);
+                }
+
+                // Thêm: tra cứu metadata kênh và chi tiết video bằng yt-dlp.
+                case SEARCH_ARTIST: {
+                    SearchPayload payload = request.dataAs(SearchPayload.class);
+                    SearchArtistData data = artistService.search(payload.keyword(), userId);
+                    return Response.success(request, data);
+                }
+                case VIEW_SONG_DETAIL: {
+                    SongPayload payload = request.dataAs(SongPayload.class);
+                    SongData data = searchService.detail(payload.songID());
                     return Response.success(request, data);
                 }
 
