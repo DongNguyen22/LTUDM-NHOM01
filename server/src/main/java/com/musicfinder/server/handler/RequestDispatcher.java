@@ -1,7 +1,9 @@
 package com.musicfinder.server.handler;
 
 import java.util.Optional;
+import java.util.List;
 
+import com.musicfinder.server.api.GoogleSuggestApi;
 import com.musicfinder.server.api.YtDlpApi;
 import com.musicfinder.server.service.CacheService;
 import com.musicfinder.shared.request.payload.SongPayload;
@@ -169,7 +171,7 @@ public class RequestDispatcher {
                     return Response.success(request, data);
                 }
 
-                // Thêm: tra cứu metadata kênh và chi tiết video bằng yt-dlp.
+                 //===============SEARCH=========================
                 case SEARCH_ARTIST: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
                     SearchArtistData data = artistService.search(payload.keyword(), userId);
@@ -179,6 +181,11 @@ public class RequestDispatcher {
                     SongPayload payload = request.dataAs(SongPayload.class);
                     SongData data = searchService.detail(payload.songID());
                     return Response.success(request, data);
+                }
+                case SUGGEST: {
+                    SearchPayload payload = request.dataAs(SearchPayload.class);
+                    List<String> suggestions = GoogleSuggestApi.suggest(payload.keyword());
+                    return Response.success(request, suggestions);
                 }
 
                 // ===============PLAYLIST========================
@@ -271,6 +278,7 @@ public class RequestDispatcher {
                     return removed ? Response.success(request, "Đã xoá bài hát thành công")
                             : Response.error(request, Status.ERROR, "Xoá thất bại");
                 }
+               
                 // Các action khác sẽ thêm dần ở đây:
                 // case SEARCH_SONG: return searchHandler.searchSong(request);
 

@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Optional;
 
 import com.musicfinder.server.model.Artists;
+import com.musicfinder.server.api.WikipediaApi;
 import com.musicfinder.server.api.YtDlpApi;
 import com.musicfinder.server.util.FuzzyMatcher;
+import com.musicfinder.server.util.TextNormalizer;
 import com.musicfinder.shared.response.payload.ArtistData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 import com.musicfinder.server.model.Songs;
@@ -27,6 +29,7 @@ public class ArtistService {
     private CacheService cache;
     private YtDlpApi api;
     private SearchService searchService;
+    private final WikipediaApi wikiApi = new WikipediaApi();
 
     public ArtistService() {
         cache = new CacheService();
@@ -44,33 +47,45 @@ public class ArtistService {
         if (keyword == null || keyword.isBlank() || keyword.trim().length() > 255)
             throw new IllegalArgumentException("Từ khóa không hợp lệ");
         keyword = keyword.trim();
-        synchronized (cache) {
-            SearchArtistData cached = cache.getArtists(keyword);
-            if (cached != null)
-                return cached;
-            List<ArtistData> result = new ArrayList<>();
-            for (Artists artist : artistRepo.searchByName(keyword, 10))
+
+        SearchArtistData cached = cache.getArtists(keyword);
+        if (cached != null)
+            return cached;
+        List<ArtistData> result = new ArrayList<>();
+        for (Artists artist : artistRepo.searchByName(keyword, 10))
+            result.add(DtoMapper.toArtistData(artist));
+
+        if (result.isEmpty()) {
+            WikipediaApi.WikiArtist remote = wikiApi.searchArtist(keyword);
+            if (remote != null) {
+                Artists artist = artistRepo.findByExternalId(remote.externalId()).orElseGet(() -> {
+                    Artists newArtist = Artists.builder()
+                            .externalId(remote.externalId())
+                            .artistName(remote.name())
+                            .normalizedName(TextNormalizer.normalize(remote.name()))
+                            .birthDate(remote.birthDate())
+                            .homeTown(remote.hometown())
+                            .bio(remote.bio())
+                            .imageUrl(remote.imageUrl())
+                            .searchCount(1L)
+                            .build();
+                    return artistRepo.save(newArtist);
+                });
                 result.add(DtoMapper.toArtistData(artist));
-            if (result.isEmpty()) {
-                List<YtDlpApi.RemoteArtist> found = api.searchArtists(keyword);
-                if (found == null)
-                    throw new IllegalStateException("Không lấy được metadata kênh từ yt-dlp");
-                for (YtDlpApi.RemoteArtist remote : found) {
-                    Artists artist = searchService.importArtist(remote);
-                    result.add(DtoMapper.toArtistData(artist));
-                }
             }
-            List<ArtistData> suggestions = new ArrayList<>();
-            if (result.isEmpty()) {
-                FuzzyMatcher fuzzy = new FuzzyMatcher();
-                List<Artists> known = artistRepo.searchByName("", 200);
-                for (Artists artist : fuzzy.suggestArtists(keyword, known))
-                    suggestions.add(DtoMapper.toArtistData(artist));
-            }
-            SearchArtistData response = new SearchArtistData(result, suggestions);
-            cache.saveArtists(keyword, response, 900);
-            return response;
         }
+        
+        List<ArtistData> suggestions = new ArrayList<>();
+        if (result.isEmpty()) {
+            FuzzyMatcher fuzzy = new FuzzyMatcher();
+            List<Artists> known = artistRepo.searchByName("", 200);
+            for (Artists artist : fuzzy.suggestArtists(keyword, known))
+                suggestions.add(DtoMapper.toArtistData(artist));
+        }
+        SearchArtistData response = new SearchArtistData(result, suggestions);
+        cache.saveArtists(keyword, response, 900);
+        return response;
+
     }
 
     // VIEW_ARTIST_DETAIL
