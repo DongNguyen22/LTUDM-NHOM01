@@ -9,7 +9,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import com.musicfinder.server.exception.DataException;
+import com.musicfinder.server.util.DataException;
 
 @Slf4j
 public class UserRepository {

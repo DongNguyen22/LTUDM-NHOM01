@@ -9,6 +9,7 @@
 # Environment / secrets
 .env
 *.local.properties
+server/src/main/resources/application.properties
 
 # Logs
 *.log
@@ -20,3 +21,7 @@ Thumbs.db
 # VS Code
 .vscode/
 tasks/
+
+# Local tools & binaries
+tools/
+*.exe

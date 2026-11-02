@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS SONGS (
     duration_seconds INTEGER      CHECK (duration_seconds >= 0),
     audio_url        TEXT,
     video_url        TEXT,
+    preview_url      TEXT,
     thumbnail_url    TEXT,
     search_count     BIGINT     DEFAULT 0 CHECK (search_count >= 0),
     created_at       TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,

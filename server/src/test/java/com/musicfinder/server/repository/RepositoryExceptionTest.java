@@ -1,6 +1,6 @@
 package com.musicfinder.server.repository;
 
-import com.musicfinder.server.exception.DataException;
+import com.musicfinder.server.util.DataException;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
