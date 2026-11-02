@@ -31,6 +31,8 @@ public class ArtistService {
     private SearchService searchService;
     private final WikipediaApi wikiApi = new WikipediaApi();
 
+    private final HistoryService historyService = new HistoryService();
+
     public ArtistService() {
         cache = new CacheService();
         api = new YtDlpApi();
@@ -49,8 +51,10 @@ public class ArtistService {
         keyword = keyword.trim();
 
         SearchArtistData cached = cache.getArtists(keyword);
-        if (cached != null)
+        if (cached != null) {
+            postSearchArtist(keyword, userId, cached.artists());
             return cached;
+        }
         List<ArtistData> result = new ArrayList<>();
         for (Artists artist : artistRepo.searchByName(keyword, 10))
             result.add(DtoMapper.toArtistData(artist));
@@ -74,7 +78,7 @@ public class ArtistService {
                 result.add(DtoMapper.toArtistData(artist));
             }
         }
-        
+
         List<ArtistData> suggestions = new ArrayList<>();
         if (result.isEmpty()) {
             FuzzyMatcher fuzzy = new FuzzyMatcher();
@@ -84,6 +88,7 @@ public class ArtistService {
         }
         SearchArtistData response = new SearchArtistData(result, suggestions);
         cache.saveArtists(keyword, response, 900);
+         postSearchArtist(keyword, userId, result);
         return response;
 
     }
@@ -154,5 +159,21 @@ public class ArtistService {
             names.add(artist.getArtistName());
         }
         return names;
+    }
+
+    private void postSearchArtist(String keyword, Long userId, List<ArtistData> artists) {
+        // Tăng search_count cho các ca sĩ tìm thấy
+        if (artists != null) {
+            for (ArtistData artist : artists) {
+                if (artist.artistID() != null) {
+                    artistRepo.updateSearchCount(artist.artistID());
+                }
+            }
+        }
+        // Ghi SearchHistory nếu user đã đăng nhập
+        if (userId != null && userId > 0) {
+            int count = (artists != null) ? artists.size() : 0;
+            historyService.recordSearch(userId, keyword, "ARTIST", count);
+        }
     }
 }

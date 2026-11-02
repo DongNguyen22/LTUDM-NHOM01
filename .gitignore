@@ -9,6 +9,7 @@
 # Environment / secrets
 .env
 *.local.properties
+server/src/main/resources/application.properties
 
 # Logs
 *.log

@@ -20,6 +20,7 @@ public class SearchService {
     private final CacheService cache;
     private final SongRepository songRepo;
     private final ArtistRepository artistRepo;
+    private final HistoryService historyService;
 
     public SearchService() {
         this(new YtDlpApi());
@@ -30,15 +31,16 @@ public class SearchService {
     }
 
     public SearchService(YtDlpApi apiService, CacheService cache) {
-        this(apiService, cache, new SongRepository(), new ArtistRepository());
+        this(apiService, cache, new SongRepository(), new ArtistRepository(), new HistoryService());
     }
 
     public SearchService(YtDlpApi apiService, CacheService cache, SongRepository songRepo,
-            ArtistRepository artistRepo) {
+            ArtistRepository artistRepo, HistoryService historyService) {
         this.apiService = apiService;
         this.cache = cache;
         this.songRepo = songRepo;
         this.artistRepo = artistRepo;
+        this.historyService = historyService;
     }
 
     public SearchSongData searchSongs(String keyword, Long userId) {
@@ -47,9 +49,10 @@ public class SearchService {
         keyword = keyword.trim();
         synchronized (cache) {
             SearchSongData cached = cache.getSongs(keyword);
-            if (cached != null)
+            if (cached != null) {
+                postSearchSong(keyword, userId, cached.songs());
                 return cached;
-
+            }
             List<SongData> result = toSongData(songRepo.searchSongs(keyword, 10));
             if (result.isEmpty()) {
                 List<YtDlpApi.RemoteSong> songs = apiService.searchSongs(keyword);
@@ -66,6 +69,7 @@ public class SearchService {
             }
             SearchSongData response = new SearchSongData(result, suggestions);
             cache.saveSongs(keyword, response, 900);
+            postSearchSong(keyword, userId, result);
             return response;
         }
     }
@@ -146,30 +150,20 @@ public class SearchService {
         return result;
     }
 
-    // Thử metadata và link audio của một video, không cần DB.
-    public static void main(String[] args) {
-        try {
-            YtDlpApi api = new YtDlpApi();
-            List<YtDlpApi.RemoteSong> songs = api.searchSongs("Được ăn cả ngã về không", 1);
-            if (songs == null || songs.isEmpty()) {
-                System.out.println("Không tìm được video để thử");
-                return;
+    private void postSearchSong(String keyword, Long userId, List<SongData> songs) {
+        // Tăng search_count cho các bài hát tìm thấy
+        if (songs != null) {
+            for (SongData song : songs) {
+                if (song.songID() != null) {
+                    songRepo.updateSearchCount(song.songID());
+                }
             }
-            YtDlpApi.RemoteSong song = songs.get(0);
-            System.out.println("Bài hát: " + song.title());
-            System.out.println("Kênh: " + song.artist().name());
-            System.out.println("Thời lượng: " + song.durationSeconds() + " giây");
-            System.out.println("Trang YouTube tham chiếu: " + song.storeUrl());
-
-            String videoId = song.externalId().replace("youtube:video:", "");
-            SongData detail = api.getSongDetail(videoId);
-            if (detail == null || detail.audio_url() == null || detail.audio_url().isBlank()) {
-                System.out.println("Chưa lấy được link audio. Xem lỗi yt-dlp phía trên.");
-                return;
-            }
-            System.out.println("Audio trực tiếp: " + detail.audio_url());
-        } catch (Exception e) {
-            System.out.println("Không thử được nguồn audio: " + e.getMessage());
+        }
+        // Ghi SearchHistory nếu user đã đăng nhập
+        if (userId != null && userId > 0) {
+            int count = (songs != null) ? songs.size() : 0;
+            historyService.recordSearch(userId, keyword, "SONG", count);
         }
     }
+
 }

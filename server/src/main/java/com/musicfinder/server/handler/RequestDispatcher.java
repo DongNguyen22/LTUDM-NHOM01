@@ -163,15 +163,14 @@ public class RequestDispatcher {
                     historyService.clearHistory(userId);
                     return Response.success(request, null);
 
+                //========================SEARCH=========================
                 case SEARCH_SONG: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
-
                     SearchSongData data = searchService.searchSongs(payload.keyword(), userId);
-
                     return Response.success(request, data);
                 }
 
-                 //===============SEARCH=========================
+                
                 case SEARCH_ARTIST: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
                     SearchArtistData data = artistService.search(payload.keyword(), userId);
