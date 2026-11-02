@@ -26,5 +26,5 @@ tasks/
 tools/
 *.exe
 
-# Nhạc và file tải dở trên server
+# File audio tải trên server
 storage/
