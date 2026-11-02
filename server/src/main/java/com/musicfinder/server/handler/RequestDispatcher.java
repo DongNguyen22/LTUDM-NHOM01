@@ -35,6 +35,17 @@ import com.musicfinder.shared.response.payload.UserData;
 import com.musicfinder.shared.response.payload.ViewArtistDetailData;
 import com.musicfinder.shared.response.payload.ViewArtistSongsData;
 
+/* NOTE CHO CLIENT
+ * Response TCP: {requestId, action, status, message, data}; đọc data khi status = SUCCESS.
+ * SEARCH_SONG   {keyword} -> data = {songs: SongData[], suggestions: SongData[]}.
+ * SUGGEST       {keyword} -> data = string[] (gợi ý từ khóa, không có songID).
+ * VIEW_SONG_DETAIL {songID} -> data = SongData; đưa data.audio_url vào player HTTP.
+ * SEARCH_ARTIST {keyword} -> data = {artists: ArtistData[], suggestions: ArtistData[]}.
+ * VIEW_ARTIST_DETAIL {artistID} -> data.artist; VIEW_ARTIST_SONGS {artistID} -> data.songs.
+ * Giữ đúng tên trường songID, artistID, durations_seconds, audio_url; xử lý giá trị null.
+ * TCP 12345 chỉ trả JSON; byte MP3 lấy từ link HTTP 8088. Gọi chi tiết trước mỗi lần phát.
+ */
+
 public class RequestDispatcher {
 
     // Service tạo 1 lần, dùng chung cho mọi Client (service không giữ dữ liệu riêng
@@ -163,14 +174,13 @@ public class RequestDispatcher {
                     historyService.clearHistory(userId);
                     return Response.success(request, null);
 
-                //========================SEARCH=========================
+                // ========================SEARCH=========================
                 case SEARCH_SONG: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
                     SearchSongData data = searchService.searchSongs(payload.keyword(), userId);
                     return Response.success(request, data);
                 }
 
-                
                 case SEARCH_ARTIST: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
                     SearchArtistData data = artistService.search(payload.keyword(), userId);
@@ -277,7 +287,7 @@ public class RequestDispatcher {
                     return removed ? Response.success(request, "Đã xoá bài hát thành công")
                             : Response.error(request, Status.ERROR, "Xoá thất bại");
                 }
-               
+
                 // Các action khác sẽ thêm dần ở đây:
                 // case SEARCH_SONG: return searchHandler.searchSong(request);
 

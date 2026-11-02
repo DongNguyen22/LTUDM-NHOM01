@@ -25,3 +25,6 @@ tasks/
 # Local tools & binaries
 tools/
 *.exe
+
+# Nhạc và file tải dở trên server
+storage/

@@ -7,6 +7,7 @@ import java.util.Optional;
 import com.musicfinder.server.api.YtDlpApi;
 import com.musicfinder.server.model.Artists;
 import com.musicfinder.server.model.Songs;
+import com.musicfinder.server.network.AudioStreamServer;
 import com.musicfinder.server.repository.ArtistRepository;
 import com.musicfinder.server.repository.SongRepository;
 import com.musicfinder.server.util.DtoMapper;
@@ -126,14 +127,14 @@ public class SearchService {
         if (song.video_url() == null || !song.video_url().startsWith("https://www.youtube.com/watch?v="))
             throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
         String videoId = song.video_url().replace("https://www.youtube.com/watch?v=", "");
-        SongData detail = apiService.getSongDetail(videoId);
-        if (detail == null || detail.audio_url() == null || detail.audio_url().isBlank())
-            throw new IllegalStateException("Không lấy được link audio trực tiếp từ yt-dlp");
-        if (!songRepo.updateAudioUrl(id, detail.audio_url()))
+        if (apiService.downloadAudioToCache(videoId) == null)
+            throw new IllegalStateException("Không chuẩn bị được MP3. Xem lỗi yt-dlp/FFmpeg tại server.");
+        String audioUrl = AudioStreamServer.getAudioUrl(videoId);
+        if (!songRepo.updateAudioUrl(id, audioUrl))
             throw new IllegalStateException("Không cập nhật được link audio vào DB");
-        return new SongData(song.songID(), detail.title(), detail.composerList(), detail.artistNames(),
-                detail.durations_seconds(), detail.audio_url(), detail.video_url(), detail.thumbnail_url(),
-                song.searchCount(), null);
+        return new SongData(song.songID(), song.title(), song.composerList(), song.artistNames(),
+                song.durations_seconds(), audioUrl, song.video_url(), song.thumbnail_url(),
+                song.searchCount(), song.preview_url());
     }
 
     private SongData toSongData(Songs song) {
