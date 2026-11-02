@@ -13,6 +13,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class YtDlpApi {
     private static final int TIMEOUT_SECONDS = 12;
@@ -88,6 +91,145 @@ public class YtDlpApi {
             }
             System.out.println("Không chuẩn bị được yt-dlp: " + e.getMessage());
             return null;
+        }
+    }
+
+    // Tự chuẩn bị FFmpeg/ffprobe trên Windows; không cần cài vào PATH.
+    public static synchronized boolean prepareAudioTools() {
+        boolean windows = System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
+        File tools = new File("tools");
+        File ffmpeg = new File(tools, windows ? "ffmpeg.exe" : "ffmpeg");
+        File ffprobe = new File(tools, windows ? "ffprobe.exe" : "ffprobe");
+        if (ffmpeg.isFile() && ffmpeg.length() > 0 && ffprobe.isFile() && ffprobe.length() > 0)
+            return true;
+        File ffmpegPart = new File(tools, "ffmpeg.exe.part");
+        File ffprobePart = new File(tools, "ffprobe.exe.part");
+        try {
+            if (!windows) {
+                System.out.println("Hãy đặt ffmpeg và ffprobe có quyền chạy vào thư mục tools trên Linux/macOS.");
+                return false;
+            }
+            String arch = System.getProperty("os.arch").toLowerCase(Locale.ROOT);
+            String platform = "win64";
+            if (arch.equals("arm64") || arch.equals("aarch64"))
+                platform = "winarm64";
+            else if (arch.equals("x86") || arch.equals("i386"))
+                platform = "win32";
+            if (!tools.isDirectory() && !tools.mkdirs()) {
+                System.out.println("Không tạo được thư mục tools");
+                return false;
+            }
+            Files.deleteIfExists(ffmpegPart.toPath());
+            Files.deleteIfExists(ffprobePart.toPath());
+            String url = "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-"
+                    + platform + "-gpl.zip";
+            System.out.println("Đang tải FFmpeg và ffprobe vào " + tools.getAbsolutePath());
+            try (InputStream input = Jsoup.connect(url).ignoreContentType(true).maxBodySize(0)
+                    .timeout(60000).execute().bodyStream();
+                    ZipInputStream zip = new ZipInputStream(input)) {
+                ZipEntry entry;
+                while ((entry = zip.getNextEntry()) != null) {
+                    if (!entry.isDirectory() && entry.getName().endsWith("/bin/ffmpeg.exe")) {
+                        if (!saveFile(zip, ffmpegPart))
+                            return false;
+                    }
+                    if (!entry.isDirectory() && entry.getName().endsWith("/bin/ffprobe.exe")) {
+                        if (!saveFile(zip, ffprobePart))
+                            return false;
+                    }
+                    if (ffmpegPart.isFile() && ffprobePart.isFile())
+                        break;
+                }
+            }
+            if (ffmpegPart.length() == 0 || ffprobePart.length() == 0) {
+                System.out.println("Gói tải về chưa có đủ FFmpeg và ffprobe");
+                return false;
+            }
+            Files.move(ffmpegPart.toPath(), ffmpeg.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.move(ffprobePart.toPath(), ffprobe.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (Exception e) {
+            System.out.println("Không chuẩn bị được FFmpeg: " + e.getMessage());
+            return false;
+        } finally {
+            try {
+                Files.deleteIfExists(ffmpegPart.toPath());
+                Files.deleteIfExists(ffprobePart.toPath());
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private static boolean saveFile(InputStream input, File file) {
+        try (FileOutputStream output = new FileOutputStream(file)) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1)
+                output.write(buffer, 0, count);
+            return true;
+        } catch (Exception e) {
+            System.out.println("Không ghi được file công cụ: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public File downloadAudioToCache(String videoId) {
+        if (videoId == null || !videoId.matches("[A-Za-z0-9_-]{11}"))
+            return null;
+        synchronized (YtDlpApi.class) {
+            File directory = new File(System.getProperty("music.audio.directory", "storage/audio"));
+            File audio = new File(directory, videoId + ".mp3");
+            File pending = new File(directory, videoId + ".download.mp3");
+            if (audio.isFile() && audio.length() > 0 && !Files.isSymbolicLink(audio.toPath())) {
+                audio.setLastModified(System.currentTimeMillis());
+                return audio;
+            }
+            Process process = null;
+            try {
+                if (binaryPath == null || !prepareAudioTools())
+                    return null;
+                if (!directory.isDirectory() && !directory.mkdirs()) {
+                    System.out.println("Không tạo được thư mục storage/audio");
+                    return null;
+                }
+                System.out.println("Đang tải và chuyển MP3: " + videoId);
+                String ffmpegName = System.getProperty("os.name").startsWith("Windows") ? "ffmpeg.exe" : "ffmpeg";
+                String[] command = { binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
+                        "--force-overwrites",
+                        "--socket-timeout", "20", "--retries", "1", "--extractor-retries", "1",
+                        "--ffmpeg-location", new File("tools", ffmpegName).getAbsolutePath(), "-f", "ba/b", "-x",
+                        "--audio-format", "mp3", "--audio-quality", "128K", "-o",
+                        new File(directory, videoId + ".download.%(ext)s").getAbsolutePath(),
+                        "--", "https://www.youtube.com/watch?v=" + videoId };
+                process = new ProcessBuilder(command).inheritIO().start();
+                if (!process.waitFor(180, TimeUnit.SECONDS)) {
+                    System.out.println("Tải MP3 quá thời gian chờ 180 giây");
+                    return null;
+                }
+                if (process.exitValue() != 0 || !pending.isFile() || pending.length() == 0) {
+                    System.out.println("Không tải/chuyển được MP3: " + videoId);
+                    return null;
+                }
+                Files.move(pending.toPath(), audio.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                audio.setLastModified(System.currentTimeMillis());
+                return audio;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            } catch (Exception e) {
+                System.out.println("Không chuẩn bị được MP3: " + e.getMessage());
+                return null;
+            } finally {
+                if (process != null) {
+                    for (ProcessHandle child : process.descendants().toList())
+                        child.destroyForcibly();
+                    process.destroyForcibly();
+                }
+                try {
+                    Files.deleteIfExists(pending.toPath());
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 

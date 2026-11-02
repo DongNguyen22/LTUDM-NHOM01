@@ -56,6 +56,9 @@ public class ClientHandler implements Runnable {
                   }
                 }
 
+                if (response.isSuccess() && response.getAction() == Action.LOGOUT) {
+                    currentUserId = null;
+                }
                 writer.println(response.toJson());
             }
         } catch (SocketTimeoutException e) {

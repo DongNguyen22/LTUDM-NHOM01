@@ -19,10 +19,10 @@ public class CacheService {
     private final Map<String, Long> expires = new HashMap<>();
 
     public CacheService() {
-        this(null);
+        this(new SearchCacheRepository());
     }
 
-    CacheService(SearchCacheRepository cacheRepo) {
+    public CacheService(SearchCacheRepository cacheRepo) {
         this.cacheRepo = cacheRepo;
     }
 
