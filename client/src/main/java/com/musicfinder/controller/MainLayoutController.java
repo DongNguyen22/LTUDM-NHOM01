@@ -9,6 +9,9 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
 import java.io.IOException;
@@ -56,6 +59,23 @@ public class MainLayoutController {
     @FXML
     private Button profileButton;
 
+    @FXML
+    private HBox nowPlayingBar;
+
+    @FXML
+    private ImageView nowPlayingImage;
+
+    @FXML
+    private Label nowPlayingTitle;
+
+    @FXML
+    private Label nowPlayingArtist;
+
+    @FXML
+    private Button playPauseButton;
+
+    private SearchController searchController;
+
     private final Map<Screen, Button> navigationButtons = new EnumMap<>(Screen.class);
 
     @FXML
@@ -80,6 +100,11 @@ public class MainLayoutController {
                 MainApp.class.getResource(screen.getFxml()));
 
         Parent content = loader.load();
+        Object controller = loader.getController();
+        if (controller instanceof SearchController) {
+            searchController = (SearchController) controller;
+            searchController.setMainLayoutController(this);
+        }
         contentContainer.getChildren().setAll(content);
 
         currentPageLabel.setText(screen.getHeaderTitle());
@@ -155,5 +180,51 @@ public class MainLayoutController {
 
     public void setFavoriteCount(Integer count) {
         favoriteCountLabel.setText(count == null ? "" : String.valueOf(count));
+    }
+
+    public void setPlayingState(boolean playing) {
+
+        if (playing) {
+            playPauseButton.setText("⏸");
+        } else {
+            playPauseButton.setText("▶");
+        }
+    }
+
+    public void showNowPlaying(String title, String artist, String thumbnailUrl) {
+
+        nowPlayingTitle.setText(title);
+        nowPlayingArtist.setText(artist);
+
+        if (thumbnailUrl != null && !thumbnailUrl.isBlank()) {
+            nowPlayingImage.setImage(
+                    new Image(thumbnailUrl, true));
+        }
+
+        nowPlayingBar.setVisible(true);
+        nowPlayingBar.setManaged(true);
+    }
+
+    @FXML
+    private void handleNextSong() {
+
+        if (searchController != null) {
+            searchController.handleNextSong();
+        }
+    }
+
+    @FXML
+    private void handlePreviousSong() {
+
+        if (searchController != null) {
+            searchController.handlePreviousSong();
+        }
+    }
+
+    @FXML
+    private void handlePlayPause() {
+        if (searchController != null) {
+            searchController.handlePlayPause();
+        }
     }
 }

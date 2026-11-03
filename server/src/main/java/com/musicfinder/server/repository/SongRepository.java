@@ -33,6 +33,7 @@ public class SongRepository {
                 .searchCount(rs.getLong("search_count"))
                 .createdAt(createdAtTs != null ? createdAtTs.toLocalDateTime() : null)
                 .updatedAt(updatedAtTs != null ? updatedAtTs.toLocalDateTime() : null)
+                .previewUrl(null)
                 .build();
     }
 

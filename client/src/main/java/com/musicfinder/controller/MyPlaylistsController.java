@@ -34,7 +34,8 @@ public class MyPlaylistsController {
 
     @FXML
     private void handleCreatePlaylist() throws IOException {
-        // Create_UpdateToPlaylistPayload payload = new Create_UpdateToPlaylistPayload();
+        // Create_UpdateToPlaylistPayload payload = new
+        // Create_UpdateToPlaylistPayload();
         Request request = Request.of(Action.CREATE_PLAYLIST, null);
         ClientConnection.getInstance().send(request, response -> {
             // UI UPDATE LATER
@@ -43,7 +44,8 @@ public class MyPlaylistsController {
 
     @FXML
     private void handleEditPlaylist() throws IOException {
-        // Create_UpdateToPlaylistPayload payload = new Create_UpdateToPlaylistPayload();
+        // Create_UpdateToPlaylistPayload payload = new
+        // Create_UpdateToPlaylistPayload();
         Request request = Request.of(Action.EDIT_FROM_PLAYLIST, null);
         ClientConnection.getInstance().send(request, response -> {
             // UI UPDATE LATER

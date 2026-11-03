@@ -189,10 +189,11 @@ CREATE INDEX IF NOT EXISTS idx_search_cache_normalized_keyword ON SEARCH_CACHE(n
 -- SEED DATA (tối thiểu, chỉ phục vụ test / demo)
 -- =============================================================================
 
--- Users mẫu (password_hash là bcrypt placeholder của "password123")
+-- Users mẫu (password_hash là bcrypt placeholder của "abc123")
 INSERT INTO USERS (username, password_hash, full_name, email) VALUES
-    ('alice', '$2a$10$examplehashAliceXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 'Alice Nguyen', 'alice@example.com'),
-    ('bob',   '$2a$10$examplehashBobXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 'Bob Tran',    'bob@example.com')
+    ('alice', '$2a$12$/vlsaZBqCSU4QtlaI/LqiO97.0afx0r3zr1hPWRpBb7bRsfDf3DKe', 'Alice Nguyen', 'alice@example.com'),
+    ('bob',   '$2a$12$/vlsaZBqCSU4QtlaI/LqiO97.0afx0r3zr1hPWRpBb7bRsfDf3DKe', 'Bob Tran',    'bob@example.com')
+    ('dong',   '$2a$12$/vlsaZBqCSU4QtlaI/LqiO97.0afx0r3zr1hPWRpBb7bRsfDf3DKe', 'Dong Nguyen',    'Dong@example.com')
 ON CONFLICT DO NOTHING;
 
 -- Artists mẫu
