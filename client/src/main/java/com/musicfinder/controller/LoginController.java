@@ -117,23 +117,17 @@ public class LoginController {
                 System.out.println(response.getMessage());
 
                 Platform.runLater(() -> {
-                    // if (response.isSuccess()) {
-                    // try {
-                    // Navigator.goTo(Screen.HOME);
-                    // } catch (IOException e) {
-                    // showMessage("Cannot open the home screen.", false);
-                    // e.printStackTrace();
-                    // }
-                    // } else {
-                    // showMessage(response.getMessage(), false);
-                    // passwordField.clear();
-                    // passwordField.requestFocus();
-                    // }
-                    try {
-                        Navigator.goTo(Screen.HOME);
-                    } catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+                    if (response.isSuccess()) {
+                        try {
+                            Navigator.goTo(Screen.HOME);
+                        } catch (IOException e) {
+                            showMessage("Cannot open the home screen.", false);
+                            e.printStackTrace();
+                        }
+                    } else {
+                        showMessage(response.getMessage(), false);
+                        passwordField.clear();
+                        passwordField.requestFocus();
                     }
                 });
             });
