@@ -183,7 +183,7 @@ public class RequestDispatcher {
 
                 case SEARCH_ARTIST: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
-                    SearchArtistData data = artistService.search(payload.keyword(), userId);
+                    SearchArtistData data = artistService.searchArtist(payload.keyword(), userId);
                     return Response.success(request, data);
                 }
                 case VIEW_SONG_DETAIL: {

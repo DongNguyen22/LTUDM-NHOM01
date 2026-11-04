@@ -45,7 +45,7 @@ public class ArtistService {
         this.searchService = searchService;
     }
 
-    public SearchArtistData search(String keyword, Long userId) {
+    public SearchArtistData searchArtist(String keyword, Long userId) {
         if (keyword == null || keyword.isBlank() || keyword.trim().length() > 255)
             throw new IllegalArgumentException("Từ khóa không hợp lệ");
         keyword = keyword.trim();
@@ -55,9 +55,22 @@ public class ArtistService {
             postSearchArtist(keyword, userId, cached.artists());
             return cached;
         }
+
         List<ArtistData> result = new ArrayList<>();
-        for (Artists artist : artistRepo.searchByName(keyword, 10))
+        for (Artists artist : artistRepo.searchByName(keyword, 10)) {
+
+            if (artist.getBio() == null || artist.getBio().isBlank()) {
+                WikipediaApi.WikiArtist remote = wikiApi.searchArtist(artist.getArtistName());
+                if (remote != null) {
+                    artist.setBio(remote.bio());
+                    artist.setImageUrl(remote.imageUrl());
+                    artist.setBirthDate(remote.birthDate());
+                    artist.setHomeTown(remote.hometown());
+                    artistRepo.update(artist);
+                }
+            }
             result.add(DtoMapper.toArtistData(artist));
+        }
 
         if (result.isEmpty()) {
             WikipediaApi.WikiArtist remote = wikiApi.searchArtist(keyword);
@@ -88,7 +101,7 @@ public class ArtistService {
         }
         SearchArtistData response = new SearchArtistData(result, suggestions);
         cache.saveArtists(keyword, response, 900);
-         postSearchArtist(keyword, userId, result);
+        postSearchArtist(keyword, userId, result);
         return response;
 
     }
