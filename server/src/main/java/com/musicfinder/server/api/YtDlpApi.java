@@ -18,6 +18,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class YtDlpApi {
+    public static final int MAX_RESULTS = 15;
     private static final int TIMEOUT_SECONDS = 12;
     private static final int MAX_JSON_BYTES = 2 * 1024 * 1024;
     private final String binaryPath;
@@ -234,14 +235,14 @@ public class YtDlpApi {
     }
 
     public List<RemoteSong> searchSongs(String keyword) {
-        return searchSongs(keyword, 10);
+        return searchSongs(keyword, MAX_RESULTS);
     }
 
     public List<RemoteSong> searchSongs(String keyword, int limit) {
         if (keyword == null || keyword.isBlank())
             return new ArrayList<>();
         if (limit < 1 || limit > 20)
-            limit = 10;
+            limit = MAX_RESULTS;
         JSONObject result = execute(List.of("--flat-playlist", "--playlist-end", String.valueOf(limit),
                 "--", "ytsearch" + limit + ":" + keyword.trim()));
         if (result == null)
@@ -280,7 +281,7 @@ public class YtDlpApi {
             return new ArrayList<>();
         String channel = sourceId.substring("youtube:channel:".length());
         String uploads = "UU" + channel.substring(2);
-        JSONObject result = execute(List.of("--flat-playlist", "--playlist-end", "10", "--",
+        JSONObject result = execute(List.of("--flat-playlist", "--playlist-end", String.valueOf(MAX_RESULTS), "--",
                 "https://www.youtube.com/playlist?list=" + uploads));
         if (result == null)
             return null;
@@ -341,7 +342,7 @@ public class YtDlpApi {
         int duration = (int) Math.max(0, Math.min(Integer.MAX_VALUE, json.optDouble("duration", 0)));
         return new SongData(null, json.optString("title", ""), composer, List.of(channel), duration,
                 audioUrl, url, json.optString("thumbnail", "https://i.ytimg.com/vi/" + videoId + "/hqdefault.jpg"), 0L,
-                null);
+                null, "youtube:video:" + videoId);
     }
 
     private JSONObject execute(List<String> arguments) {

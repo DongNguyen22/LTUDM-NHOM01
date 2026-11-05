@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS USERS (
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS ARTISTS (
     artist_id       BIGSERIAL    PRIMARY KEY,
-    external_id     VARCHAR(100),
+    external_id     VARCHAR(100) UNIQUE,
     name            VARCHAR(150) NOT NULL,
     normalized_name VARCHAR(150),
     birth_date      DATE,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS ARTISTS (
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS SONGS (
     song_id          BIGSERIAL    PRIMARY KEY,
-    external_id      VARCHAR(100),
+    external_id      VARCHAR(100) UNIQUE,
     title            VARCHAR(255) NOT NULL,
     normalized_title VARCHAR(255),
     composer         VARCHAR(255),

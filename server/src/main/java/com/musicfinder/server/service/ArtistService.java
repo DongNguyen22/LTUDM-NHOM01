@@ -1,8 +1,12 @@
 package com.musicfinder.server.service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.musicfinder.server.model.Artists;
 import com.musicfinder.server.api.WikipediaApi;
@@ -32,6 +36,7 @@ public class ArtistService {
     private final WikipediaApi wikiApi = new WikipediaApi();
 
     private final HistoryService historyService = new HistoryService();
+    private final Map<Long, Object> artistSongLocks = new ConcurrentHashMap<>();
 
     public ArtistService() {
         cache = new CacheService();
@@ -121,41 +126,69 @@ public class ArtistService {
     // VIEW_ARTIST_SONGS
     public Optional<ViewArtistSongsData> viewArtistSongs(Long artistId) {
         checkId(artistId);
-        // Phải kiểm tra ca sĩ có tồn tại không, vì "không có ca sĩ" khác với "ca sĩ
-        // chưa có bài nào"
         Optional<Artists> artist = artistRepo.findById(artistId);
         if (artist.isEmpty()) {
             return Optional.empty();
         }
 
         String source = artist.get().getExternalId();
-        if (source != null && source.startsWith("youtube:channel:")) {
-            synchronized (cache) {
-                ViewArtistSongsData cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS",
-                        ViewArtistSongsData.class);
-                if (cached != null)
-                    return Optional.of(cached);
+        if (source == null || !source.startsWith("youtube:channel:")) {
+            return Optional.of(new ViewArtistSongsData(songsInDb(artistId)));
+        }
+
+        ViewArtistSongsData cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS",
+                ViewArtistSongsData.class);
+        if (cached != null)
+            return Optional.of(cached);
+
+        synchronized (artistSongLocks.computeIfAbsent(artistId, k -> new Object())) {
+            cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS", ViewArtistSongsData.class);
+            if (cached != null)
+                return Optional.of(cached);
+
+            try {
                 List<YtDlpApi.RemoteSong> videos = api.songsForArtist(source);
                 if (videos == null)
                     throw new IllegalStateException("Không lấy được video của kênh");
-                for (YtDlpApi.RemoteSong video : videos) {
-                    SongData saved = searchService.importSong(video);
-                    songRepo.linkArtist(saved.songID(), artistId);
-                }
+                ViewArtistSongsData response = new ViewArtistSongsData(mergeSongs(artistId, videos));
+                cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, 900);
+                return Optional.of(response);
+            } catch (RuntimeException e) {
+                ViewArtistSongsData old = cache.getValueEvenIfExpired(String.valueOf(artistId),
+                        "ARTIST_SONGS", ViewArtistSongsData.class);
+                if (old != null)
+                    return Optional.of(old);
+                throw e;
             }
         }
+    }
 
-        List<Songs> songs = songRepo.findByArtistId(artistId);
-
+    private List<SongData> songsInDb(Long artistId) {
         List<SongData> result = new ArrayList<>();
-        for (Songs song : songs) {
-            List<String> artistNames = getArtistNames(song.getSongId());
-            result.add(DtoMapper.toSongData(song, artistNames));
+        for (Songs song : songRepo.findByArtistId(artistId)) {
+            result.add(DtoMapper.toSongData(song, getArtistNames(song.getSongId())));
         }
-        ViewArtistSongsData response = new ViewArtistSongsData(result);
-        if (source != null && source.startsWith("youtube:channel:"))
-            cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, 900);
-        return Optional.of(response);
+        return result;
+    }
+
+    private List<SongData> mergeSongs(Long artistId, List<YtDlpApi.RemoteSong> videos) {
+        List<SongData> result = songsInDb(artistId);
+        if (result.size() > YtDlpApi.MAX_RESULTS)
+            result = new ArrayList<>(result.subList(0, YtDlpApi.MAX_RESULTS));
+
+        Set<String> seen = new HashSet<>();
+        for (SongData song : result) {
+            if (song.externalId() != null)
+                seen.add(song.externalId());
+        }
+
+        for (YtDlpApi.RemoteSong video : videos) {
+            if (result.size() >= YtDlpApi.MAX_RESULTS)
+                break;
+            if (seen.add(video.externalId()))
+                result.add(searchService.toResultSong(video));
+        }
+        return result;
     }
 
     // id null hoặc <= 0 là không hợp lệ -> Dispatcher đổi thành INVALID_REQUEST

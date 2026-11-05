@@ -23,6 +23,11 @@ public class PlayListService {
     private final PlaylistRepository playlistRepo = new PlaylistRepository();
     private final SongRepository songRepo = new SongRepository();
     private final ArtistRepository artistRepo = new ArtistRepository();
+    private final SearchService searchService;
+
+    public PlayListService(SearchService searchService) {
+        this.searchService = searchService;
+    }
 
     // =================PLAYLIST NORMAL=======================
 
@@ -90,35 +95,36 @@ public class PlayListService {
         if (payload == null)
             throw new IllegalArgumentException("Dữ liệu yêu cầu không hợp lệ");
         validateUser(userId);
-        checkOwnership(userId, payload.playlistId());
-        return playlistRepo.addSongToPlaylist(payload.playlistId(), extractSongId(payload));
+        checkOwnership(userId, payload.playlistId()); // kiểm tra chủ sở hữu TRƯỚC khi import
+        return playlistRepo.addSongToPlaylist(payload.playlistId(), resolveSongIdToAdd(payload));
     }
 
     public boolean removeSongFromPlaylist(Long userId, Add_RemoveToPlaylistPayload payload) {
         validateUser(userId);
         checkOwnership(userId, payload.playlistId());
-        return playlistRepo.removeSongFromPlaylist(payload.playlistId(), extractSongId(payload));
+        return playlistRepo.removeSongFromPlaylist(payload.playlistId(), resolveSongIdToAdd(payload));
     }
 
     // ===========================BÀI HÁT YUE THÍCH===========================
     public GetFavoritesData getFavorites(Long userId) {
-    validateUser(userId);
-    Long favPlaylistId = playlistRepo.getOrCreateFavoritePlaylist(userId);
-    // Gọi 1 query duy nhất:
-    List<SongData> songs = songRepo.findSongDataByPlaylistId(favPlaylistId);
-    return new GetFavoritesData(songs);
-}
+        validateUser(userId);
+        Long favPlaylistId = playlistRepo.getOrCreateFavoritePlaylist(userId);
+        // Gọi 1 query duy nhất:
+        List<SongData> songs = songRepo.findSongDataByPlaylistId(favPlaylistId);
+        return new GetFavoritesData(songs);
+    }
 
     public boolean addFavorite(Long userId, Add_RemoveToPlaylistPayload payload) {
         validateUser(userId);
+        Long songId = resolveSongIdToAdd(payload);
         Long favPlaylistId = playlistRepo.getOrCreateFavoritePlaylist(userId);
-        return playlistRepo.addSongToPlaylist(favPlaylistId, extractSongId(payload));
+        return playlistRepo.addSongToPlaylist(favPlaylistId, songId);
     }
 
     public boolean removeFavorite(Long userId, Add_RemoveToPlaylistPayload payload) {
         validateUser(userId);
         Long favPlaylistId = playlistRepo.getOrCreateFavoritePlaylist(userId);
-        return playlistRepo.removeSongFromPlaylist(favPlaylistId, extractSongId(payload));
+        return playlistRepo.removeSongFromPlaylist(favPlaylistId, resolveSongIdToAdd(payload));
     }
 
     private void validateUser(Long userId) {
@@ -134,6 +140,15 @@ public class PlayListService {
         if (playlistRepo.findById(playlistId, userId).isEmpty()) {
             throw new IllegalArgumentException("Không tìm thấy playlist hoặc bạn không phải chủ sở hữu");
         }
+    }
+
+    private Long resolveSongIdToAdd(Add_RemoveToPlaylistPayload payload) {
+        if (payload == null || payload.song() == null)
+            throw new IllegalArgumentException("Thông tin bài hát không hợp lệ");
+        String externalId = payload.song().externalId();
+        if (externalId != null && !externalId.isBlank())
+            return searchService.ensureSong(externalId);
+        return extractSongId(payload);
     }
 
     public static Long extractSongId(Add_RemoveToPlaylistPayload payload) {

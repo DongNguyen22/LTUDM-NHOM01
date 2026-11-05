@@ -2,8 +2,6 @@ package com.musicfinder.server.service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.HashMap;
-import java.util.Map;
 
 import com.musicfinder.server.util.DataException;
 import com.musicfinder.server.model.SearchCache;
@@ -11,12 +9,11 @@ import com.musicfinder.server.repository.SearchCacheRepository;
 import com.musicfinder.server.util.TextNormalizer;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 import com.musicfinder.shared.response.payload.SearchSongData;
+import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.util.Json;
 
 public class CacheService {
     private final SearchCacheRepository cacheRepo;
-    private final Map<String, String> values = new HashMap<>();
-    private final Map<String, Long> expires = new HashMap<>();
 
     public CacheService() {
         this(new SearchCacheRepository());
@@ -27,33 +24,28 @@ public class CacheService {
     }
 
     public String createKey(String s, String type) {
-        return "server1:youtube:db:" + type + ":" + TextNormalizer.normalize(s);
+        return type + ":" + TextNormalizer.normalize(s);
     }
 
-    private synchronized String getJson(String s, String type) {
-        if (cacheRepo == null) {
-            String key = createKey(s, type);
-            Long end = expires.get(key);
-            if (end == null)
-                return null;
-            if (end <= System.currentTimeMillis()) {
-                remove(s, type);
-                return null;
-            }
-            return values.get(key);
-        }
+    private String getJson(String s, String type) {
+        return readJson(s, type, false);
+    }
+
+    private String readJson(String s, String type, boolean evenIfExpired) {
         try {
-            Optional<SearchCache> found = cacheRepo.findByCacheKey(createKey(s, type));
+            String key = createKey(s, type);
+            Optional<SearchCache> found = evenIfExpired
+                    ? cacheRepo.findByCacheKeyEvenIfExpired(key)
+                    : cacheRepo.findByCacheKey(key);
             if (found.isEmpty()) {
                 return null;
             }
 
             SearchCache cache = found.get();
-            if (cache.getExpiresAt() == null
-                    || !cache.getExpiresAt().isAfter(LocalDateTime.now())) {
+            if (!evenIfExpired && (cache.getExpiresAt() == null
+                    || !cache.getExpiresAt().isAfter(LocalDateTime.now()))) {
                 return null;
             }
-
             return cache.getResponseJson();
         } catch (DataException e) {
             System.out.println("Không đọc được cache: " + e.getMessage());
@@ -62,18 +54,24 @@ public class CacheService {
     }
 
     public SearchSongData getSongs(String s) {
-        String json = getJson(s, "SONG");
+        return parseSongs(getJson(s, "SONG"));
+    }
+
+    public SearchSongData getSongsEvenIfExpired(String s) {
+        return parseSongs(readJson(s, "SONG", true));
+    }
+
+    private SearchSongData parseSongs(String json) {
         if (json == null) {
             return null;
         }
-
         try {
             SearchSongData data = Json.fromJson(json, SearchSongData.class);
             if (data == null || data.songs() == null) {
                 return null;
             }
-            for (int i = 0; i < data.songs().size(); i++) {
-                if (data.songs().get(i) == null || data.songs().get(i).songID() == null) {
+            for (SongData song : data.songs()) {
+                if (song == null || (song.songID() == null && song.externalId() == null)) {
                     return null;
                 }
             }
@@ -122,7 +120,17 @@ public class CacheService {
         try {
             return Json.fromJson(json, cls);
         } catch (IllegalArgumentException e) {
-            remove(s, type);
+            return null;
+        }
+    }
+
+    public <T> T getValueEvenIfExpired(String s, String type, Class<T> cls) {
+        String json = readJson(s, type, true);
+        if (json == null)
+            return null;
+        try {
+            return Json.fromJson(json, cls);
+        } catch (IllegalArgumentException e) {
             return null;
         }
     }
@@ -131,24 +139,9 @@ public class CacheService {
         save(s, type, data, seconds);
     }
 
-    public synchronized void remove(String s, String type) {
-        values.remove(createKey(s, type));
-        expires.remove(createKey(s, type));
-    }
-
-    private synchronized void save(String s, String type, Object data, int seconds) {
+    private void save(String s, String type, Object data, int seconds) {
         if (seconds <= 0) {
             throw new IllegalArgumentException("Thời gian cache phải lớn hơn 0");
-        }
-        if (cacheRepo == null) {
-            String key = createKey(s, type);
-            if (values.size() >= 512 && !values.containsKey(key)) {
-                values.clear();
-                expires.clear();
-            }
-            values.put(key, Json.toJson(data));
-            expires.put(key, System.currentTimeMillis() + seconds * 1000L);
-            return;
         }
         try {
             SearchCache cache = SearchCache.builder()

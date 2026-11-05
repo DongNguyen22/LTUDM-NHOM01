@@ -54,7 +54,7 @@ public class RequestDispatcher {
     private final ArtistService artistService;
     private final HistoryService historyService = new HistoryService();
     private final AuthService authService = new AuthService();
-    private final PlayListService playListService = new PlayListService();
+    private final PlayListService playListService;
     private final SearchService searchService;
     private final CacheService cacheService = new CacheService();
 
@@ -65,6 +65,7 @@ public class RequestDispatcher {
     public RequestDispatcher(YtDlpApi api) {
         searchService = new SearchService(api, cacheService);
         artistService = new ArtistService(cacheService, api, searchService);
+        playListService = new PlayListService(searchService);
     }
 
     public Response handle(String json) {
@@ -188,7 +189,7 @@ public class RequestDispatcher {
                 }
                 case VIEW_SONG_DETAIL: {
                     SongPayload payload = request.dataAs(SongPayload.class);
-                    SongData data = searchService.detail(payload.songID());
+                    SongData data = searchService.detail(payload.songID(), payload.externalId());
                     return Response.success(request, data);
                 }
                 case SUGGEST: {

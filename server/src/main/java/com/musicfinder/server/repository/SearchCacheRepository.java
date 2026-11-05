@@ -44,6 +44,23 @@ public class SearchCacheRepository {
         }
     }
 
+    public Optional<SearchCache> findByCacheKeyEvenIfExpired(String cacheKey) {
+        String sql = "SELECT * FROM SEARCH_CACHE WHERE cache_key = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, cacheKey);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapResultSetToSearchCache(rs));
+                }
+            }
+            return Optional.empty();
+        } catch (SQLException e) {
+            log.error("Lỗi truy vấn search cache (kể cả hết hạn) theo key [{}]: {}", cacheKey, e.getMessage(), e);
+            throw new DataException("Lỗi truy vấn search cache theo key " + cacheKey, e);
+        }
+    }
+
     public SearchCache save(SearchCache cache) {
         String sql = "INSERT INTO SEARCH_CACHE (cache_key, keyword, normalized_keyword, search_type, response_json, expires_at) "
                 + "VALUES (?, ?, ?, ?, ?::jsonb, ?) "
@@ -74,13 +91,14 @@ public class SearchCacheRepository {
         }
     }
 
-    public int deleteExpired() {
-        String sql = "DELETE FROM SEARCH_CACHE WHERE expires_at <= CURRENT_TIMESTAMP";
+    public int deleteExpiredOlderThanDays(int days) {
+        String sql = "DELETE FROM SEARCH_CACHE WHERE expires_at < CURRENT_TIMESTAMP - make_interval(days => ?)";
         try (Connection conn = DatabaseConfig.getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, days);
             return ps.executeUpdate();
         } catch (SQLException e) {
-            log.error("Lỗi xóa search cache hết hạn: {}", e.getMessage(), e);
+            log.error("Lỗi xóa search cache hết hạn quá {} ngày: {}", days, e.getMessage(), e);
             throw new DataException("Lỗi xóa search cache hết hạn", e);
         }
     }
