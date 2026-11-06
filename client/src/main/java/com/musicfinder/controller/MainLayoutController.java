@@ -4,11 +4,14 @@ import com.musicfinder.MainApp;
 import com.musicfinder.navigation.Navigator;
 import com.musicfinder.network.ClientConnection;
 import com.musicfinder.navigation.Screen;
+
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -18,7 +21,11 @@ import java.io.IOException;
 import java.util.EnumMap;
 import java.util.Map;
 
-public class MainLayoutController {
+import com.musicfinder.player.PlayerListener;
+import com.musicfinder.player.PlayerManager;
+import com.musicfinder.shared.response.payload.SongData;
+
+public class MainLayoutController implements PlayerListener {
 
     @FXML
     private StackPane contentContainer;
@@ -79,6 +86,20 @@ public class MainLayoutController {
     private final Map<Screen, Button> navigationButtons = new EnumMap<>(Screen.class);
 
     @FXML
+    private Slider progressSlider;
+
+    @FXML
+    private Label currentTimeLabel;
+
+    @FXML
+    private Label totalTimeLabel;
+
+    private boolean userSeeking = false;
+
+    @FXML
+    private StackPane loadingOverlay;
+
+    @FXML
     private void initialize() {
         navigationButtons.put(Screen.HOME, homeButton);
         navigationButtons.put(Screen.SEARCH, searchButton);
@@ -89,6 +110,21 @@ public class MainLayoutController {
         navigationButtons.put(Screen.TRENDING, trendingButton);
         navigationButtons.put(Screen.PROFILE, profileButton);
         setServerConnected(ClientConnection.getInstance().isConnected());
+        PlayerManager.getInstance().setListener(this);
+        progressSlider.setMin(0);
+        progressSlider.setMax(100);
+        progressSlider.setValue(0);
+
+        progressSlider.setOnMousePressed(event -> {
+            userSeeking = true;
+        });
+
+        progressSlider.setOnMouseReleased(event -> {
+            userSeeking = false;
+
+            PlayerManager.getInstance()
+                    .seek(progressSlider.getValue());
+        });
     }
 
     public void show(Screen screen) throws IOException {
@@ -182,15 +218,6 @@ public class MainLayoutController {
         favoriteCountLabel.setText(count == null ? "" : String.valueOf(count));
     }
 
-    public void setPlayingState(boolean playing) {
-
-        if (playing) {
-            playPauseButton.setText("⏸");
-        } else {
-            playPauseButton.setText("▶");
-        }
-    }
-
     public void showNowPlaying(String title, String artist, String thumbnailUrl) {
 
         nowPlayingTitle.setText(title);
@@ -206,25 +233,101 @@ public class MainLayoutController {
     }
 
     @FXML
+    private void handlePlayPause() {
+
+        PlayerManager.getInstance()
+                .togglePlayPause();
+    }
+
+    @FXML
     private void handleNextSong() {
 
-        if (searchController != null) {
-            searchController.handleNextSong();
-        }
+        PlayerManager.getInstance()
+                .nextSong();
     }
 
     @FXML
     private void handlePreviousSong() {
 
-        if (searchController != null) {
-            searchController.handlePreviousSong();
-        }
+        PlayerManager.getInstance()
+                .previousSong();
     }
 
-    @FXML
-    private void handlePlayPause() {
-        if (searchController != null) {
-            searchController.handlePlayPause();
-        }
+    @Override
+    public void onSongChanged(SongData song) {
+
+        String artists = song.artistNames() == null ? "Unknown artist"
+                : String.join(", ", song.artistNames());
+        showNowPlaying(song.title(), artists, song.thumbnail_url());
     }
+
+    @Override
+    public void onPlayingChanged(
+            boolean playing) {
+
+        setPlayingState(playing);
+    }
+
+    public void setPlayingState(boolean playing) {
+        playPauseButton.setText(
+                playing ? "⏸" : "▶");
+    }
+
+    @Override
+    public void onPlayerError(String message) {
+
+        System.out.println(
+                "Player error: " + message);
+    }
+
+    @Override
+    public void onProgressChanged(
+            double currentSeconds,
+            double totalSeconds) {
+
+        if (totalSeconds <= 0) {
+            return;
+        }
+
+        if (!userSeeking) {
+
+            double percent = currentSeconds
+                    / totalSeconds
+                    * 100;
+
+            progressSlider.setValue(percent);
+        }
+
+        currentTimeLabel.setText(
+                formatTime(currentSeconds));
+
+        totalTimeLabel.setText(
+                formatTime(totalSeconds));
+    }
+
+    private String formatTime(double seconds) {
+
+        int totalSeconds = (int) seconds;
+
+        int minutes = totalSeconds / 60;
+
+        int remainingSeconds = totalSeconds % 60;
+
+        return String.format(
+                "%02d:%02d",
+                minutes,
+                remainingSeconds);
+    }
+
+    @Override
+    public void onLoadingChanged(boolean loading) {
+
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> onLoadingChanged(loading));
+            return;
+        }
+
+        loadingOverlay.setVisible(loading);
+    }
+
 }
