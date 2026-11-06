@@ -4,8 +4,11 @@ import com.musicfinder.navigation.Navigator;
 import com.musicfinder.navigation.Screen;
 
 import com.musicfinder.network.ClientConnection;
+import com.musicfinder.player.PlayerManager;
 import com.musicfinder.shared.enums.Action;
+import com.musicfinder.shared.enums.PlayList_Type;
 import com.musicfinder.shared.request.Request;
+import com.musicfinder.shared.request.payload.Add_RemoveToPlaylistPayload;
 import com.musicfinder.shared.request.payload.SearchPayload;
 import com.musicfinder.shared.response.payload.SearchSongData;
 import com.musicfinder.shared.response.payload.SongData;
@@ -30,6 +33,7 @@ import javafx.scene.layout.Region;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class SearchController {
 
@@ -48,22 +52,21 @@ public class SearchController {
     @FXML
     private Label resultSubtitleLabel;
 
-    // play song
-    private MediaPlayer mediaPlayer;
-
-    private SongData currentSong;
-
-    private boolean isPlaying = false;
+    private final List<SongData> currentSongList = new ArrayList<>();
 
     private MainLayoutController mainLayoutController;
-
-    private List<SongData> currentSongList = new ArrayList<>();
-
-    private int currentSongIndex = -1;
 
     public void setMainLayoutController(MainLayoutController mainLayoutController) {
 
         this.mainLayoutController = mainLayoutController;
+    }
+
+    private Consumer<SongData> onPlaySong;
+
+    public void setOnPlaySong(
+            Consumer<SongData> onPlaySong) {
+
+        this.onPlaySong = onPlaySong;
     }
 
     @FXML
@@ -72,7 +75,7 @@ public class SearchController {
     }
 
     @FXML
-    private void handleSearch() throws IOException {
+    private void handleSearch() {
 
         String keyword = searchField.getText() == null
                 ? ""
@@ -89,23 +92,33 @@ public class SearchController {
         Request request = Request.of(
                 Action.SEARCH_SONG,
                 payload);
+        showMessage("Searching...");
+        try {
+            ClientConnection.getInstance()
+                    .send(request, response -> {
+                        if (!response.isSuccess()) {
+                            Platform.runLater(() -> showMessage(
+                                    response.getMessage()));
+                            return;
+                        }
+                        SearchSongData data = response.dataAs(SearchSongData.class);
+                        Platform.runLater(() -> {
+                            currentSongList.clear();
+                            if (data.songs() != null) {
+                                currentSongList.addAll(
+                                        data.songs());
+                            }
+                            showMessage("Found " + currentSongList.size() + " songs");
+                            renderSongs(currentSongList);
+                        });
+                    });
 
-        ClientConnection.getInstance().send(request, response -> {
-            if (!response.isSuccess()) {
-                Platform.runLater(() -> {
-                    showMessage(response.getMessage());
-                });
-                return;
-            }
-            SearchSongData data = response.dataAs(SearchSongData.class);
-            System.out.println("Số bài hát: " + data.songs().size());
-            currentSongList.clear();
-            currentSongList.addAll(data.songs());
-            Platform.runLater(() -> {
-                showMessage("Found " + currentSongList.size() + " songs");
-                renderSongs(currentSongList);
-            });
-        });
+        } catch (IOException e) {
+
+            showMessage(
+                    "Cannot connect to server: "
+                            + e.getMessage());
+        }
     }
 
     @FXML
@@ -233,7 +246,6 @@ public class SearchController {
 
         // event
         playButton.setOnAction(event -> {
-            currentSongIndex = index;
             handlePlaySong(song);
             event.consume();
         });
@@ -249,211 +261,37 @@ public class SearchController {
 
     private void handlePlaySong(SongData song) {
 
-        System.out.println(
-                "Clicked song: "
-                        + song.songID()
-                        + " - "
-                        + song.title()
-                        + " action: Play");
-
-        currentSong = song;
-
-        String artists = song.artistNames() == null
-                ? "Unknown artist"
-                : String.join(", ", song.artistNames());
-
-        /*
-         * SearchController không tự đụng UI main-layout.
-         * Gửi dữ liệu sang MainLayoutController.
-         */
-        if (mainLayoutController != null) {
-
-            mainLayoutController.showNowPlaying(
-                    song.title(),
-                    artists,
-                    song.thumbnail_url());
-        }
-
-        playAudio(song);
+        PlayerManager.getInstance().playSong(currentSongList, song);
     }
 
     private void handleAddToPlaylist(SongData song) {
 
-        System.out.println(
-                "Clicked song: "
-                        + song.songID()
-                        + " - "
-                        + song.title() + " action: playlist");
+        AddSongToPlaylistDialog.show(searchResultsList.getScene().getWindow(), song, () -> {
+            System.out.println("Thêm bài hát vào playlist thành công!");
+        });
     }
 
     private void handlleAddToFavorite(SongData song) {
-
-        System.out.println(
-                "Clicked song: "
-                        + song.songID()
-                        + " - "
-                        + song.title() + "action: favorite");
-    }
-
-    private void playAudio(
-            SongData song) {
-
-        String audioUrl = song.audio_url();
-
-        // Nếu audio_url không có
-        // thử preview_url
-
-        if (audioUrl == null
-                || audioUrl.isBlank()) {
-
-            audioUrl = song.preview_url();
-        }
-
-        if (audioUrl == null
-                || audioUrl.isBlank()) {
-
-            System.out.println(
-                    "Song không có audio URL");
-
-            return;
-        }
-
+        Add_RemoveToPlaylistPayload payload = new Add_RemoveToPlaylistPayload(null, song, PlayList_Type.FAVORITES);
+        Request request = Request.of(Action.ADD_FAVORITE, payload);
         try {
-
-            // =========================
-            // DỪNG BÀI CŨ
-            // =========================
-
-            if (mediaPlayer != null) {
-
-                mediaPlayer.stop();
-                mediaPlayer.dispose();
-            }
-
-            // =========================
-            // TẠO MEDIA
-            // =========================
-
-            Media media = new Media(audioUrl);
-
-            mediaPlayer = new MediaPlayer(media);
-
-            // =========================
-            // KHI LOAD XONG
-            // =========================
-
-            mediaPlayer.setOnReady(() -> {
-
-                System.out.println(
-                        "Audio ready: "
-                                + song.title());
-
-                mediaPlayer.play();
-
-                isPlaying = true;
-                if (mainLayoutController != null) {
-                    mainLayoutController.setPlayingState(true);
+            ClientConnection.getInstance().send(request, response -> {
+                if (!response.isSuccess()) {
+                    Platform.runLater(() -> {
+                        StatusDialog.error(resultTitleLabel.getScene().getWindow(), response.getMessage());
+                        return;
+                    });
                 }
+                Platform.runLater(() -> {
+                    StatusDialog.success(resultTitleLabel.getScene().getWindow(), response.getMessage());
+                });
             });
-
-            // =========================
-            // KHI PHÁT HẾT
-            // =========================
-
-            mediaPlayer.setOnEndOfMedia(() -> {
-
-                isPlaying = false;
-                if (mainLayoutController != null) {
-                    mainLayoutController.setPlayingState(true);
-                }
-            });
-
-            // =========================
-            // ERROR
-            // =========================
-
-            mediaPlayer.setOnError(() -> {
-
-                System.out.println(
-                        "MediaPlayer error: "
-                                + mediaPlayer
-                                        .getError());
-            });
-
         } catch (Exception e) {
-
-            System.out.println(
-                    "Cannot play audio: "
-                            + e.getMessage());
+            // TODO: handle exception
+            Platform.runLater(() -> {
+                StatusDialog.error(resultTitleLabel.getScene().getWindow(), e.getMessage());
+                return;
+            });
         }
-    }
-
-    @FXML
-    public void handlePlayPause() {
-
-        if (mediaPlayer == null) {
-            return;
-        }
-
-        if (isPlaying) {
-
-            mediaPlayer.pause();
-
-            isPlaying = false;
-            if (mainLayoutController != null) {
-                mainLayoutController.setPlayingState(true);
-            }
-
-        } else {
-
-            mediaPlayer.play();
-
-            isPlaying = true;
-            if (mainLayoutController != null) {
-                mainLayoutController.setPlayingState(true);
-            }
-        }
-    }
-
-    public void handleNextSong() {
-
-        if (currentSongList == null || currentSongList.isEmpty()) {
-            return;
-        }
-
-        if (currentSongIndex == -1) {
-            return;
-        }
-
-        currentSongIndex++;
-
-        if (currentSongIndex >= currentSongList.size()) {
-            currentSongIndex = 0;
-        }
-
-        SongData nextSong = currentSongList.get(currentSongIndex);
-
-        handlePlaySong(nextSong);
-    }
-
-    public void handlePreviousSong() {
-
-        if (currentSongList == null || currentSongList.isEmpty()) {
-            return;
-        }
-
-        if (currentSongIndex == -1) {
-            return;
-        }
-
-        currentSongIndex--;
-
-        if (currentSongIndex < 0) {
-            currentSongIndex = currentSongList.size() - 1;
-        }
-
-        SongData previousSong = currentSongList.get(currentSongIndex);
-
-        handlePlaySong(previousSong);
     }
 }

@@ -1,0 +1,257 @@
+/* Nền phủ toàn bộ màn hình */
+.playlist-modal-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.62);
+    -fx-alignment: center;
+}
+
+/* Khung popup */
+.playlist-modal-dialog {
+    -fx-background-color: #25212d;
+    -fx-background-radius: 13;
+    -fx-border-color: #3a3247;
+    -fx-border-radius: 13;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian,
+            rgba(0, 0, 0, 0.55),
+            26, 0.26, 0, 12);
+    -fx-font-family: "Segoe UI";
+}
+
+/* Icon */
+.playlist-modal-icon-box {
+    -fx-background-color: #62447b;
+    -fx-background-radius: 10;
+}
+
+.playlist-modal-icon {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #dec2ff;
+}
+
+/* Nút X đóng popup */
+.playlist-modal-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: #aaa0b8;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.playlist-modal-close:hover {
+    -fx-text-fill: white;
+}
+
+/* Chữ YOUR LIBRARY */
+.playlist-modal-eyebrow {
+    -fx-text-fill: #c39cff;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+/* Tiêu đề popup */
+.playlist-modal-title {
+    -fx-text-fill: white;
+    -fx-font-size: 22px;
+}
+
+.playlist-modal-subtitle {
+    -fx-text-fill: #a9a0b4;
+    -fx-font-size: 11px;
+}
+
+.playlist-modal-field-label {
+    -fx-text-fill: #e4deeb;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* TextField và TextArea */
+.playlist-modal-input,
+.playlist-modal-textarea {
+    -fx-background-color: #1b1822;
+    -fx-control-inner-background: #1b1822;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #80788b;
+    -fx-border-color: #494151;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 10;
+    -fx-font-size: 12px;
+}
+
+/* Khi nhấn vào ô nhập */
+.playlist-modal-input:focused,
+.playlist-modal-textarea:focused {
+    -fx-border-color: #a77be6;
+}
+
+/* Nền bên trong TextArea */
+.playlist-modal-textarea .content {
+    -fx-background-color: #1b1822;
+}
+
+.playlist-modal-textarea .scroll-pane,
+.playlist-modal-textarea .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Thông báo lỗi */
+.playlist-modal-error {
+    -fx-text-fill: #ff9da6;
+    -fx-font-size: 11px;
+}
+
+/* Nút Cancel và Save */
+.playlist-modal-cancel,
+.playlist-modal-save {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 7;
+    -fx-padding: 10 15;
+    -fx-cursor: hand;
+}
+
+/* Cancel */
+.playlist-modal-cancel {
+    -fx-background-color: #2d2835;
+    -fx-border-color: #3c3546;
+    -fx-border-radius: 7;
+    -fx-text-fill: #e9e2f1;
+}
+
+/* Create/Save */
+.playlist-modal-save {
+    -fx-background-color: #b78af5;
+    -fx-text-fill: #24152d;
+}
+
+.playlist-modal-cancel:hover {
+    -fx-background-color: #37313f;
+}
+
+.playlist-modal-save:hover {
+    -fx-background-color: #a97ce8;
+}
+
+.playlist-modal-save:disabled {
+    -fx-opacity: 0.65;
+}
+
+/* Toàn bộ Dialog */
+.playlist-dialog-pane {
+    -fx-background-color: #25212d;
+    -fx-background-radius: 14;
+    -fx-background-insets: 0;
+
+    -fx-border-color: #42374d;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+
+    -fx-padding: 20 22 16 22;
+
+    -fx-effect: dropshadow(gaussian,
+            rgba(0, 0, 0, 0.6),
+            25, 0.25, 0, 8);
+
+    -fx-font-family: "Segoe UI";
+}
+
+/* Phần chứa nội dung */
+.playlist-dialog-pane>.content {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+/* Thanh chứa nút Cancel và Create */
+.playlist-dialog-pane>.button-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 16 0 0 0;
+}
+
+.playlist-dialog-pane>.button-bar>.container {
+    -fx-background-color: transparent;
+}
+
+/* Biểu tượng ở đầu popup */
+.playlist-dialog-icon {
+    -fx-background-color: #594370;
+    -fx-background-radius: 10;
+
+    -fx-text-fill: #d8b5ff;
+    -fx-font-size: 22px;
+
+    -fx-alignment: center;
+    -fx-pref-width: 42;
+    -fx-pref-height: 42;
+}
+
+/* Tên playlist */
+.playlist-modal-input {
+    -fx-background-color: #1b1822;
+    -fx-control-inner-background: #1b1822;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #93869f;
+
+    -fx-border-color: #51415f;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+
+    -fx-padding: 9 12;
+}
+
+.playlist-modal-input:focused {
+    -fx-border-color: #bc91f7;
+}
+
+/* Mô tả */
+.playlist-modal-textarea {
+    -fx-background-color: #1b1822;
+    -fx-control-inner-background: #1b1822;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #93869f;
+
+    -fx-border-color: #51415f;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.playlist-modal-textarea:focused {
+    -fx-border-color: #bc91f7;
+}
+
+.playlist-modal-textarea .content {
+    -fx-background-color: #1b1822;
+}
+
+/* Nút hủy */
+.playlist-modal-cancel {
+    -fx-background-color: #322b3b;
+    -fx-border-color: #4a3f54;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+
+    -fx-text-fill: #e8dff0;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-cursor: hand;
+}
+
+/* Nút tạo playlist */
+.playlist-modal-save {
+    -fx-background-color: #ba8df7;
+    -fx-background-radius: 7;
+
+    -fx-text-fill: #24152e;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-cursor: hand;
+}
+
+.playlist-modal-save:hover {
+    -fx-background-color: #c9a5ff;
+}
+
+.playlist-modal-save:disabled {
+    -fx-opacity: 0.6;
+}
