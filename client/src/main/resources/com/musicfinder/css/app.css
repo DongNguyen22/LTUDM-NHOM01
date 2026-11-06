@@ -382,3 +382,41 @@
 
     -fx-stroke: transparent;
 }
+
+/* Nền tối phủ toàn bộ màn hình */
+.song-loading-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.55);
+    -fx-alignment: center;
+}
+
+/* Khung loading nổi ở giữa */
+.song-loading-card {
+    -fx-alignment: center;
+    -fx-padding: 24;
+    -fx-background-color: #242731;
+    -fx-background-radius: 16;
+
+    -fx-effect: dropshadow(gaussian,
+            rgba(0, 0, 0, 0.45),
+            22,
+            0.2,
+            0,
+            8);
+}
+
+/* Màu vòng tròn */
+.song-loading-spinner {
+    -fx-progress-color: #1db954;
+}
+
+/* Chữ loading */
+.song-loading-title {
+    -fx-text-fill: white;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.song-loading-description {
+    -fx-text-fill: #a4a7b0;
+    -fx-font-size: 12px;
+}
