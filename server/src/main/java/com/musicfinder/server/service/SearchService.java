@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -19,7 +20,9 @@ import com.musicfinder.server.util.FuzzyMatcher;
 import com.musicfinder.server.util.TextNormalizer;
 import com.musicfinder.shared.response.payload.SearchSongData;
 import com.musicfinder.shared.response.payload.SongData;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class SearchService {
     private final YtDlpApi apiService;
     private final CacheService cache;
@@ -235,6 +238,28 @@ public class SearchService {
 
         return result;
 
+    }
+
+    // =====================UTIL========================
+    // Trong SearchService.java
+    public void prepareSongAudio(Long songId) {
+        if (songId == null || songId <= 0)
+            return;
+
+        // Chạy ngầm trong background thread, không block luồng thêm playlist của người
+        // dùng
+        CompletableFuture.runAsync(() -> {
+            try {
+                // Tận dụng luôn hàm detail() đã có sẵn logic kiểm tra file, tải MP3 và lưu
+                // cache
+                detail(songId, null);
+                log.info("Đã chuẩn bị xong MP3 cho bài hát ID: {}", songId);
+            } catch (Exception e) {
+                // Nếu lỗi mạng, yt-dlp lỗi hay video bản quyền: chỉ log cảnh báo, không làm
+                // crash app
+                log.warn("Không thể tải trước audio cho bài hát [{}]: {}", songId, e.getMessage());
+            }
+        });
     }
 
     private SongData toSongData(Songs song) {

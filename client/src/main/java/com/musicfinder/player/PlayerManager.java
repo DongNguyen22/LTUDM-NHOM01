@@ -56,7 +56,7 @@ public class PlayerManager {
             listener.onLoadingChanged(true);
         }
 
-        SongPayload payload = new SongPayload(song.songID());
+        SongPayload payload = new SongPayload(song.songID(), song.externalId());
         Request request = Request.of(Action.VIEW_SONG_DETAIL, payload);
         try {
             ClientConnection.getInstance().send(request, response -> {

@@ -70,6 +70,7 @@ public class DtoMapper {
                 p.getPlaylistId(),
                 p.getName(),
                 p.getDescription(),
+                p.getThumbnailUrl(),
                 type);
     }
 

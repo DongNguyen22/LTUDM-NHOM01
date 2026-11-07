@@ -90,6 +90,8 @@ CREATE TABLE IF NOT EXISTS PLAYLISTS (
     user_id     BIGINT,
     name        VARCHAR(100) NOT NULL,
     description VARCHAR(255),
+    thumbnail_url VARCHAR(255),
+    custom_thumbnail BOOLEAN NOT NULL DEFAULT FALSE,
     type VARCHAR(20) NOT NULL DEFAULT 'NORMAL' CHECK (type IN ('NORMAL', 'FAVORITES')),
     created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
@@ -164,6 +166,8 @@ CREATE INDEX IF NOT EXISTS idx_song_artists_artist_id ON SONG_ARTISTS(artist_id)
 
 -- PLAYLISTS
 CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON PLAYLISTS(user_id);
+ALTER TABLE PLAYLISTS
+ADD COLUMN IF NOT EXISTS custom_thumbnail BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Mỗi user chỉ có tối đa một playlist FAVORITES
 CREATE UNIQUE INDEX IF NOT EXISTS ux_playlists_user_favorites
@@ -192,7 +196,7 @@ CREATE INDEX IF NOT EXISTS idx_search_cache_normalized_keyword ON SEARCH_CACHE(n
 -- Users mẫu (password_hash là bcrypt placeholder của "abc123")
 INSERT INTO USERS (username, password_hash, full_name, email) VALUES
     ('alice', '$2a$12$/vlsaZBqCSU4QtlaI/LqiO97.0afx0r3zr1hPWRpBb7bRsfDf3DKe', 'Alice Nguyen', 'alice@example.com'),
-    ('bob',   '$2a$12$/vlsaZBqCSU4QtlaI/LqiO97.0afx0r3zr1hPWRpBb7bRsfDf3DKe', 'Bob Tran',    'bob@example.com')
+    ('bob',   '$2a$12$/vlsaZBqCSU4QtlaI/LqiO97.0afx0r3zr1hPWRpBb7bRsfDf3DKe', 'Bob Tran',    'bob@example.com'),
     ('dong',   '$2a$12$/vlsaZBqCSU4QtlaI/LqiO97.0afx0r3zr1hPWRpBb7bRsfDf3DKe', 'Dong Nguyen',    'Dong@example.com')
 ON CONFLICT DO NOTHING;
 

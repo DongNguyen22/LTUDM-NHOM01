@@ -24,6 +24,7 @@ tasks/
 
 # Local tools & binaries
 tools/
+graphify-out/
 *.exe
 
 # File audio tải trên server

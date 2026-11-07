@@ -15,6 +15,8 @@ public class Playlists {
     private Long userId;
     private String name;
     private String description;
+    private String thumbnailUrl;
+    private boolean customThumbnail;
     private String type;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

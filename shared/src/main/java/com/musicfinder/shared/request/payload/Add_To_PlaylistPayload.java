@@ -4,6 +4,6 @@ import java.util.List;
 
 import com.musicfinder.shared.response.payload.SongData;
 
-public record Add_To_PlaylistPayload(List<Long> playlistId, SongData song) {
+public record Add_To_PlaylistPayload(List<Long> playlistIds, SongData song) {
 
 }

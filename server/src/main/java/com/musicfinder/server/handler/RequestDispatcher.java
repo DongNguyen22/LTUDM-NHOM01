@@ -10,6 +10,11 @@ import com.musicfinder.shared.request.payload.SongPayload;
 import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.HistoryData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
+import com.musicfinder.shared.response.Response;
+import com.musicfinder.shared.response.payload.SearchSongData;
+import com.musicfinder.shared.response.payload.UserData;
+import com.musicfinder.shared.response.payload.ViewArtistDetailData;
+import com.musicfinder.shared.response.payload.ViewArtistSongsData;
 
 import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
@@ -18,6 +23,7 @@ import com.musicfinder.server.service.PlayListService;
 import com.musicfinder.server.service.SearchService;
 import com.musicfinder.server.service.StatisticsService;
 import com.musicfinder.shared.enums.Status;
+
 import com.musicfinder.shared.request.Request;
 import com.musicfinder.shared.request.payload.Add_RemoveToPlaylistPayload;
 import com.musicfinder.shared.request.payload.ArtistPayload;
@@ -30,11 +36,7 @@ import com.musicfinder.shared.request.payload.RegisterPayload;
 import com.musicfinder.shared.request.payload.RemoveRowSearchHistory;
 import com.musicfinder.shared.request.payload.Remove_OpenPlaylistPayload;
 import com.musicfinder.shared.request.payload.StatisticsPayload;
-import com.musicfinder.shared.response.Response;
-import com.musicfinder.shared.response.payload.SearchSongData;
-import com.musicfinder.shared.response.payload.UserData;
-import com.musicfinder.shared.response.payload.ViewArtistDetailData;
-import com.musicfinder.shared.response.payload.ViewArtistSongsData;
+import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
 
 /* NOTE CHO CLIENT
  * Response TCP: {requestId, action, status, message, data}; đọc data khi status = SUCCESS.
@@ -247,10 +249,13 @@ public class RequestDispatcher {
                     if (userId == null) {
                         return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
                     }
-                    Add_RemoveToPlaylistPayload payload = request.dataAs(Add_RemoveToPlaylistPayload.class);
-                    boolean added = playListService.addSongToPlaylist(userId, payload);
-                    return added ? Response.success(request, "Đã thêm bài hát vào playlist")
-                            : Response.error(request, Status.ERROR, "Bài hát đã có trong playlist hoặc thêm thất bại");
+                    Add_To_PlaylistPayload payload = request.dataAs(Add_To_PlaylistPayload.class);
+                    int addedCount = playListService.addSongToPlaylists(userId, payload);
+                    String message = addedCount > 0
+                            ? "Đã thêm bài hát vào " + addedCount + " playlist"
+                            : "Bài hát đã có trong tất cả playlist đã chọn";
+
+                    return Response.success(request, message);
                 }
 
                 case REMOVE_FROM_PLAYLIST: {

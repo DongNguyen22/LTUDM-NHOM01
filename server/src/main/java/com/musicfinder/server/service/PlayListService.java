@@ -15,6 +15,7 @@ import com.musicfinder.shared.response.payload.GetFavoritesData;
 import com.musicfinder.shared.response.payload.GetPlaylistSongsData;
 import com.musicfinder.shared.response.payload.PlayListData;
 import com.musicfinder.shared.response.payload.SongData;
+import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,11 +36,13 @@ public class PlayListService {
         validateUser(userId);
         if (payload == null || payload.name() == null || payload.name().isBlank())
             throw new IllegalArgumentException("Tên playlist không được để trống!");
-
+        String thumbnailUrl = normalizeThumbnailUrl(payload.thumbnailUrl());
         Playlists playlist = Playlists.builder()
                 .userId(userId)
                 .name(payload.name().trim())
                 .description(payload.description() != null ? payload.description().trim() : "")
+                .thumbnailUrl(thumbnailUrl)
+                .customThumbnail(thumbnailUrl != null)
                 .type("NORMAL")
                 .build();
 
@@ -67,6 +70,7 @@ public class PlayListService {
                 .userId(userId)
                 .name(payload.name().trim())
                 .description(payload.description() != null ? payload.description().trim() : "")
+                .thumbnailUrl(normalizeThumbnailUrl(payload.thumbnailUrl()))
                 .build();
         return playlistRepo.update(playlist);
     }
@@ -96,7 +100,36 @@ public class PlayListService {
             throw new IllegalArgumentException("Dữ liệu yêu cầu không hợp lệ");
         validateUser(userId);
         checkOwnership(userId, payload.playlistId()); // kiểm tra chủ sở hữu TRƯỚC khi import
-        return playlistRepo.addSongToPlaylist(payload.playlistId(), resolveSongIdToAdd(payload));
+        Long songId = resolveSongIdToAdd(payload);
+        searchService.prepareSongAudio(songId);
+
+        return playlistRepo.addSongToPlaylist(payload.playlistId(), songId);
+    }
+
+    public int addSongToPlaylists(Long userId, Add_To_PlaylistPayload payload) {
+        validateUser(userId);
+
+        if (payload == null
+                || payload.playlistIds() == null
+                || payload.playlistIds().isEmpty()) {
+            throw new IllegalArgumentException("Bạn chưa chọn playlist");
+        }
+
+        // Loại bỏ ID trùng nhau
+        List<Long> playlistIds = payload.playlistIds()
+                .stream()
+                .distinct()
+                .toList();
+
+        // Kiểm tra tất cả playlist trước khi thêm
+        for (Long playlistId : playlistIds) {
+            checkOwnership(userId, playlistId);
+        }
+
+        // Tìm/import bài hát một lần cho cả danh sách
+        Long songId = resolveSongIdToAdd(payload.song());
+        searchService.prepareSongAudio(songId);
+        return playlistRepo.addSongToPlaylists(playlistIds, songId);
     }
 
     public boolean removeSongFromPlaylist(Long userId, Add_RemoveToPlaylistPayload payload) {
@@ -117,6 +150,7 @@ public class PlayListService {
     public boolean addFavorite(Long userId, Add_RemoveToPlaylistPayload payload) {
         validateUser(userId);
         Long songId = resolveSongIdToAdd(payload);
+        searchService.prepareSongAudio(songId);
         Long favPlaylistId = playlistRepo.getOrCreateFavoritePlaylist(userId);
         return playlistRepo.addSongToPlaylist(favPlaylistId, songId);
     }
@@ -127,6 +161,7 @@ public class PlayListService {
         return playlistRepo.removeSongFromPlaylist(favPlaylistId, resolveSongIdToAdd(payload));
     }
 
+    // ==========================UTIL=======================================
     private void validateUser(Long userId) {
         if (userId == null || userId <= 0) {
             throw new IllegalArgumentException("Người dùng chưa đăng nhập");
@@ -142,13 +177,32 @@ public class PlayListService {
         }
     }
 
+    // Giữ cho các chức năng hiện tại tiếp tục sử dụng
     private Long resolveSongIdToAdd(Add_RemoveToPlaylistPayload payload) {
-        if (payload == null || payload.song() == null)
+        if (payload == null) {
+            throw new IllegalArgumentException("Dữ liệu yêu cầu không hợp lệ");
+        }
+
+        return resolveSongIdToAdd(payload.song());
+    }
+
+    // Dùng chung cho cả thêm một và nhiều playlist
+    private Long resolveSongIdToAdd(SongData song) {
+        if (song == null) {
             throw new IllegalArgumentException("Thông tin bài hát không hợp lệ");
-        String externalId = payload.song().externalId();
-        if (externalId != null && !externalId.isBlank())
+        }
+
+        String externalId = song.externalId();
+
+        if (externalId != null && !externalId.isBlank()) {
             return searchService.ensureSong(externalId);
-        return extractSongId(payload);
+        }
+
+        if (song.songID() == null || song.songID() <= 0) {
+            throw new IllegalArgumentException("ID bài hát không hợp lệ");
+        }
+
+        return song.songID();
     }
 
     public static Long extractSongId(Add_RemoveToPlaylistPayload payload) {
@@ -156,5 +210,12 @@ public class PlayListService {
             throw new IllegalArgumentException("Thông tin bài hát không hợp lệ");
         }
         return payload.song().songID();
+    }
+
+    private String normalizeThumbnailUrl(String thumbnailUrl) {
+        if (thumbnailUrl == null || thumbnailUrl.isBlank()) {
+            return null;
+        }
+        return thumbnailUrl.trim();
     }
 }
