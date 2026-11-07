@@ -13,47 +13,59 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.SearchHistoryController" stylesheets="@css/search-history.css" spacing="18" styleClass="page-content">
-                <padding><Insets top="34" right="36" bottom="36" left="36"/></padding>
+<VBox xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.SearchHistoryController" stylesheets="@css/search-history.css" spacing="18" styleClass="page-content">
+    <padding>
+        <Insets top="34" right="36" bottom="36" left="36"/>
+    </padding>
 
-                <HBox alignment="BOTTOM_LEFT">
-                    <VBox spacing="5">
-                        <Label text="YOUR ACTIVITY / HISTORY" styleClass="eyebrow"/>
-                        <Label text="Search history" styleClass="page-title"/>
-                        <Label text="Find your way back to something good." styleClass="page-subtitle"/>
-                    </VBox>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Button text="Clear history" graphicTextGap="9" onAction="#handleClearHistory" styleClass="clear-button"><graphic><Group scaleX="0.62" scaleY="0.62"><SVGPath content="M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M10 11v6 M14 11v6" styleClass="clear-svg"/></Group></graphic></Button>
-                </HBox>
+    <HBox alignment="BOTTOM_LEFT">
+        <VBox spacing="5">
+            <Label text="YOUR ACTIVITY / HISTORY" styleClass="eyebrow"/>
+            <Label text="Search history" styleClass="page-title"/>
+            <Label text="Find your way back to something good." styleClass="page-subtitle"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Clear history" graphicTextGap="9" onAction="#handleClearHistory" styleClass="clear-button">
+            <graphic>
+                <Group scaleX="0.62" scaleY="0.62">
+                    <SVGPath content="M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M10 11v6 M14 11v6" styleClass="clear-svg"/>
+                </Group>
+            </graphic>
+        </Button>
+    </HBox>
 
-                <HBox spacing="14" styleClass="filter-tabs">
-                    <Button fx:id="allTabButton" text="All" onAction="#handleShowAll" styleClass="filter-tab, filter-tab-active"/>
-                    <Button fx:id="songsTabButton" text="Songs" onAction="#handleShowSongs" styleClass="filter-tab"/>
-                    <Button fx:id="artistsTabButton" text="Artists" onAction="#handleShowArtists" styleClass="filter-tab"/>
-                </HBox>
+    <!-- Search -->
+    <HBox alignment="CENTER_RIGHT">
+        <Region HBox.hgrow="ALWAYS"/>
 
-                <Separator styleClass="history-separator"/>
-                <Label fx:id="historyMessageLabel" text="" styleClass="history-message"/>
+        <TextField fx:id="searchField" promptText="Search favorite songs..." prefWidth="280" styleClass="favorite-search"/>
+    </HBox>
 
-                <VBox fx:id="historyTable" styleClass="history-table">
-                    <HBox alignment="CENTER_LEFT" styleClass="table-header">
-                        <Label text="SEARCH KEYWORD" prefWidth="350" styleClass="header-label"/>
-                        <Label text="TYPE" prefWidth="130" styleClass="header-label"/>
-                        <Label text="RESULT" prefWidth="150" styleClass="header-label"/>
-                        <Label text="DATE &amp; TIME" prefWidth="180" styleClass="header-label"/>
-                        <Label text="ACTION" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="header-label"/>
-                    </HBox>
+    <HBox spacing="14" styleClass="filter-tabs">
+        <Button fx:id="allTabButton" text="All" onAction="#handleShowAll" styleClass="filter-tab, filter-tab-active"/>
+        <Button fx:id="songsTabButton" text="Songs" onAction="#handleShowSongs" styleClass="filter-tab"/>
+        <Button fx:id="artistsTabButton" text="Artists" onAction="#handleShowArtists" styleClass="filter-tab"/>
+    </HBox>
 
-                    <HBox fx:id="songRowOne" alignment="CENTER_LEFT" styleClass="history-row" visible="false" managed="false">
-                        </HBox>
+    <Separator styleClass="history-separator"/>
+    <Label fx:id="historyMessageLabel" text="" styleClass="history-message"/>
 
-                    <HBox fx:id="artistRowOne" alignment="CENTER_LEFT" styleClass="history-row" visible="false" managed="false">
-                        </HBox>
+    <VBox fx:id="historyTable" styleClass="history-table">
+        <HBox alignment="CENTER_LEFT" styleClass="table-header">
+            <Label text="SEARCH KEYWORD" prefWidth="350" styleClass="header-label"/>
+            <Label text="TYPE" prefWidth="130" styleClass="header-label"/>
+            <Label text="RESULT" prefWidth="150" styleClass="header-label"/>
+            <Label text="DATE &amp; TIME" prefWidth="180" styleClass="header-label"/>
+            <Label text="ACTION" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="header-label"/>
+        </HBox>
+    </VBox>
 
-                    <HBox fx:id="songRowTwo" alignment="CENTER_LEFT" styleClass="history-row" visible="false" managed="false">
-                        </HBox>
+    <ScrollPane fx:id="songScroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" prefHeight="320" styleClass="favorite-scroll">
 
-                    <HBox fx:id="artistRowTwo" alignment="CENTER_LEFT" styleClass="history-row, last-row" visible="false" managed="false">
-                        </HBox>
-                </VBox>
-            </VBox>
+        <content>
+            <VBox fx:id="songList" spacing="0"/>
+        </content>
+
+    </ScrollPane>
+</VBox>

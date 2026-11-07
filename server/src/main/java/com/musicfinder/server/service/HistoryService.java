@@ -11,7 +11,7 @@ import com.musicfinder.shared.response.payload.HistoryData;
 // Lịch sử tìm kiếm của từng user. Mọi hàm đều nhận userId nên user này không thể xem/xóa lịch sử của user khác
 public class HistoryService {
     private static final int MAX_KEYWORD_LENGTH = 255;
-    private static final int HISTORY_LIMIT = 10;
+    private static final int HISTORY_LIMIT = 20;
 
     private final SearchHistoryRepository historyRepo = new SearchHistoryRepository();
 

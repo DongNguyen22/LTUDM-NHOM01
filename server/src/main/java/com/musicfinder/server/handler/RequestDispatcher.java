@@ -8,6 +8,7 @@ import com.musicfinder.server.api.YtDlpApi;
 import com.musicfinder.server.service.CacheService;
 import com.musicfinder.shared.request.payload.SongPayload;
 import com.musicfinder.shared.response.payload.SongData;
+import com.musicfinder.shared.response.payload.HistoryData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 
 import com.musicfinder.server.service.ArtistService;
@@ -153,7 +154,8 @@ public class RequestDispatcher {
                     if (userId == null) {
                         return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
                     }
-                    return Response.success(request, historyService.getHistory(userId));
+                    List<HistoryData> lists = historyService.getHistory(userId);
+                    return Response.success(request, lists);
 
                 case REMOVE_ROW_HISTORY: {
                     if (userId == null) {

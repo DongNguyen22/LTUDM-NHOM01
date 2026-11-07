@@ -452,3 +452,128 @@
 .nav-button.bottom-nav:hover { -fx-background-color: #1b1821; -fx-text-fill: #ffffff; }
 .nav-button.bottom-nav:focused { -fx-background-color: transparent; -fx-background-insets: 0; }
 .nav-button.bottom-nav:hover:focused { -fx-background-color: #1b1821; }
+/* Search History only. Shared sidebar/player styles stay in app.css. */
+.history-scroll,
+.history-scroll > .viewport,
+.history-page {
+    -fx-background-color: #0e0d13;
+    -fx-background-insets: 0;
+}
+.history-page { -fx-min-width: 650; }
+
+.history-eyebrow {
+    -fx-text-fill: #b993ed;
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+}
+.history-page-title {
+    -fx-text-fill: #f7f4fb;
+    -fx-font-size: 30px;
+    -fx-font-weight: 400;
+}
+.history-subtitle { -fx-text-fill: #8b8594; -fx-font-size: 12px; }
+
+.history-clear-button {
+    -fx-background-color: #292531;
+    -fx-background-radius: 9;
+    -fx-border-color: #403748;
+    -fx-border-radius: 9;
+    -fx-border-width: 1;
+    -fx-text-fill: #f1ebf6;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 10 15;
+    -fx-cursor: hand;
+}
+.history-clear-button:hover { -fx-background-color: #362f41; }
+.history-clear-button:disabled { -fx-opacity: 0.45; }
+.history-clear-icon {
+    -fx-fill: transparent;
+    -fx-stroke: #e9e3ed;
+    -fx-stroke-width: 1.6;
+    -fx-scale-x: 0.65;
+    -fx-scale-y: 0.65;
+}
+
+.history-filter-tabs {
+    -fx-border-color: transparent transparent #302a36 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.history-filter-tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: #968c9f;
+    -fx-font-weight: 700;
+    -fx-font-size: 12px;
+    -fx-padding: 11 14 12;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-cursor: hand;
+}
+.history-filter-tab:hover { -fx-text-fill: #e4c9ff; }
+.history-filter-active {
+    -fx-text-fill: #d0a3ff;
+    -fx-border-color: transparent transparent #b58afa transparent;
+}
+
+.history-table {
+    -fx-background-color: #141219;
+    -fx-background-radius: 11;
+    -fx-border-radius: 11;
+    -fx-border-color: #302a38;
+    -fx-border-width: 1;
+}
+.history-table-header {
+    -fx-background-color: #222029;
+    -fx-background-radius: 10 10 0 0;
+    -fx-padding: 17 20;
+}
+.history-header-label {
+    -fx-text-fill: #92879d;
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+}
+.history-row {
+    -fx-padding: 12 20;
+    -fx-min-height: 65;
+    -fx-border-color: transparent transparent #302a38 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.history-row:hover { -fx-background-color: #1f1b27; }
+.history-row-last { -fx-border-width: 0; }
+
+.history-type-icon {
+    -fx-background-radius: 8;
+    -fx-min-width: 32;
+    -fx-min-height: 32;
+    -fx-max-width: 32;
+    -fx-max-height: 32;
+}
+.history-song-icon { -fx-background-color: #372a48; }
+.history-artist-icon { -fx-background-color: #403052; }
+.history-type-glyph {
+    -fx-fill: transparent;
+    -fx-stroke: #bf91fc;
+    -fx-stroke-width: 1.9;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+.history-keyword { -fx-text-fill: #f6f2fa; -fx-font-size: 12px; -fx-font-weight: 700; }
+.history-cell { -fx-text-fill: #aba2b4; -fx-font-size: 11px; }
+.history-date { -fx-text-fill: #aba3b7; -fx-font-size: 11px; }
+.history-time { -fx-text-fill: #736a7e; -fx-font-size: 10px; }
+.history-dot { -fx-text-fill: #78dca4; -fx-font-size: 9px; }
+.history-found { -fx-text-fill: #8fdfb4; -fx-font-size: 11px; }
+.history-no-result, .history-no-dot { -fx-text-fill: #d7a3aa; -fx-font-size: 11px; }
+
+.history-search-again, .history-remove-row {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c697ff;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 7 2;
+    -fx-cursor: hand;
+}
+.history-search-again:hover, .history-remove-row:hover { -fx-text-fill: #eed9ff; }
+.history-remove-row { -fx-text-fill: #756b80; -fx-font-size: 16px; }
+.history-empty { -fx-text-fill: #958aa3; -fx-font-size: 13px; -fx-padding: 30 20; }
+.history-message { -fx-text-fill: #cbaaef; -fx-font-size: 12px; }
