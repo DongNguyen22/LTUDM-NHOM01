@@ -24,6 +24,8 @@ public class PlaylistRepository {
                 .userId(rs.getLong("user_id"))
                 .name(rs.getString("name"))
                 .description(rs.getString("description"))
+                .thumbnailUrl(rs.getString("thumbnail_url"))
+                .customThumbnail(rs.getBoolean("custom_thumbnail"))
                 .type(rs.getString("type"))
                 .createdAt(createdAtTs != null ? createdAtTs.toLocalDateTime() : null)
                 .updatedAt(updatedAtTs != null ? updatedAtTs.toLocalDateTime() : null)
@@ -122,7 +124,7 @@ public class PlaylistRepository {
 
     // Lưu playlist mới
     public Playlists save(Playlists playlist) {
-        String sql = "INSERT INTO PLAYLISTS (user_id, name, description, type) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO PLAYLISTS (user_id, name, description, thumbnail_url, custom_thumbnail, type) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConfig.getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             if (playlist.getUserId() != null) {
@@ -132,7 +134,11 @@ public class PlaylistRepository {
             }
             ps.setString(2, playlist.getName());
             ps.setString(3, playlist.getDescription());
-            ps.setString(4, playlist.getType() != null ? playlist.getType() : PlayList_Type.NORMAL.name());
+            ps.setString(4, playlist.getThumbnailUrl());
+            ps.setBoolean(5, playlist.isCustomThumbnail());
+            ps.setString(6, playlist.getType() != null
+                    ? playlist.getType()
+                    : PlayList_Type.NORMAL.name());
             int affected = ps.executeUpdate();
             if (affected > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -149,19 +155,45 @@ public class PlaylistRepository {
 
     // Cập nhật tên và mô tả playlist
     public boolean update(Playlists playlist) {
-        String sql = "UPDATE PLAYLISTS SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP "
-                + "WHERE playlist_id = ? AND user_id = ? AND type = 'NORMAL' ";
+        boolean changeThumbnail = playlist.getThumbnailUrl() != null;
+
+        String sql = """
+                UPDATE PLAYLISTS
+                SET name = ?,
+                    description = ?,
+                    thumbnail_url = CASE
+                        WHEN ? THEN ?
+                        ELSE thumbnail_url
+                    END,
+                    custom_thumbnail = CASE
+                        WHEN ? THEN TRUE
+                        ELSE custom_thumbnail
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE playlist_id = ?
+                  AND user_id = ?
+                  AND type = 'NORMAL'
+                """;
+
         try (Connection conn = DatabaseConfig.getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
+
             ps.setString(1, playlist.getName());
             ps.setString(2, playlist.getDescription());
-            ps.setLong(3, playlist.getPlaylistId());
-            ps.setLong(4, playlist.getUserId());
+            ps.setBoolean(3, changeThumbnail);
+            ps.setString(4, playlist.getThumbnailUrl());
+            ps.setBoolean(5, changeThumbnail);
+            ps.setLong(6, playlist.getPlaylistId());
+            ps.setLong(7, playlist.getUserId());
+
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            log.error("Lỗi cập nhật playlist [{}] của user [{}]: {}", playlist.getPlaylistId(), playlist.getUserId(),
+            log.error("Lỗi cập nhật playlist [{}] của user [{}]: {}",
+                    playlist.getPlaylistId(),
+                    playlist.getUserId(),
                     e.getMessage(), e);
-            throw new DataException("Lỗi cập nhật playlist ID " + playlist.getPlaylistId(), e);
+            throw new DataException(
+                    "Lỗi cập nhật playlist ID " + playlist.getPlaylistId(), e);
         }
     }
 
@@ -210,33 +242,115 @@ public class PlaylistRepository {
     }
 
     // Thêm bài hát vào playlist
-    public boolean addSongToPlaylist(Long playlistId, Long songId) {
-        String sql = "INSERT INTO PLAYLIST_SONGS (playlist_id, song_id, position) "
+    public int addSongToPlaylists(List<Long> playlistIds, Long songId) {
+        String addsql = "INSERT INTO PLAYLIST_SONGS (playlist_id, song_id, position) "
                 + "VALUES (?, ?, COALESCE((SELECT MAX(position) + 1 FROM PLAYLIST_SONGS WHERE playlist_id = ?), 1)) "
                 + "ON CONFLICT (playlist_id, song_id) DO NOTHING";
-        try (Connection conn = DatabaseConfig.getConnection();
-                PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, playlistId);
-            ps.setLong(2, songId);
-            ps.setLong(3, playlistId);
-            return ps.executeUpdate() > 0;
+
+        String thumbnailSql = """
+                UPDATE PLAYLISTS
+                SET thumbnail_url = (
+                    SELECT thumbnail_url FROM SONGS WHERE song_id = ?
+                )
+                WHERE playlist_id = ?
+                  AND type = 'NORMAL'
+                  AND custom_thumbnail = FALSE
+                  AND (
+                      SELECT COUNT(*) FROM PLAYLIST_SONGS
+                      WHERE playlist_id = ?
+                  ) = 1
+                """;
+
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                int addedCount = 0;
+
+                for (Long playlistId : playlistIds) {
+                    int added;
+
+                    // Thêm bài vào playlist đang xét
+                    try (PreparedStatement ps = conn.prepareStatement(addsql)) {
+                        ps.setLong(1, playlistId);
+                        ps.setLong(2, songId);
+                        ps.setLong(3, playlistId);
+                        added = ps.executeUpdate();
+                    }
+
+                    // Chỉ cập nhật ảnh khi thực sự thêm được bài
+                    if (added > 0) {
+                        try (PreparedStatement ps = conn.prepareStatement(thumbnailSql)) {
+                            ps.setLong(1, songId);
+                            ps.setLong(2, playlistId);
+                            ps.setLong(3, playlistId);
+                            ps.executeUpdate();
+                        }
+
+                        addedCount++;
+                    }
+                }
+
+                conn.commit();
+                return addedCount;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
             log.error("Lỗi thêm bài hát vào playlist [{}]", e.getMessage());
             throw new DataException("Lỗi thêm bài hát vào playlist", e);
         }
     }
 
-    //Xoá bài hát ra khỏi playlist
-    public boolean removeSongFromPlaylist(Long playlistId, Long songId){
-        String sql = "DELETE FROM PLAYLIST_SONGS WHERE playlist_id = ? AND song_id = ?";
-        try(Connection conn = DatabaseConfig.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, playlistId);
-            ps.setLong(2, songId);
-            return ps.executeUpdate() > 0;
+    public boolean addSongToPlaylist(Long playlistId, Long songId) {
+        return addSongToPlaylists(List.of(playlistId), songId) > 0;
+    }
+
+    // Xoá bài hát ra khỏi playlist
+    public boolean removeSongFromPlaylist(Long playlistId, Long songId) {
+        String removeSql = "DELETE FROM PLAYLIST_SONGS WHERE playlist_id = ? AND song_id = ?";
+
+        String thumbnailSql = """
+                UPDATE PLAYLISTS
+                SET thumbnail_url = (
+                    SELECT s.thumbnail_url
+                    FROM PLAYLIST_SONGS ps
+                    JOIN SONGS s ON ps.song_id = s.song_id
+                    WHERE ps.playlist_id = ?
+                    ORDER BY ps.position ASC
+                    LIMIT 1
+                )
+                WHERE playlist_id = ?
+                  AND type = 'NORMAL'
+                  AND custom_thumbnail = FALSE
+                """;
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try {
+                int removed;
+
+                try (PreparedStatement ps = conn.prepareStatement(removeSql)) {
+                    ps.setLong(1, playlistId);
+                    ps.setLong(2, songId);
+                    removed = ps.executeUpdate();
+                }
+                if (removed > 0) {
+                    try (PreparedStatement ps = conn.prepareStatement(thumbnailSql)) {
+                        ps.setLong(1, playlistId);
+                        ps.setLong(2, playlistId);
+                        ps.executeUpdate();
+                    }
+                }
+
+                conn.commit();
+                return removed > 0;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
-            log.error("Lỗi xoá bài hát trong playlist [{}]", e.getMessage());
-            throw new DataException("Lỗi xoá bài hát trong playlist", e);
+            throw new DataException("Lỗi xóa bài hát khỏi playlist", e);
         }
     }
 }

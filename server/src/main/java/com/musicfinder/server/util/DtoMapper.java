@@ -24,7 +24,8 @@ public class DtoMapper {
                 s.getVideoUrl(),
                 s.getThumbnailUrl(),
                 s.getSearchCount(),
-                s.getPreviewUrl());
+                s.getPreviewUrl(),
+                s.getExternalId());
     }
 
     public static ArtistData toArtistData(Artists a) {
@@ -69,8 +70,8 @@ public class DtoMapper {
                 p.getPlaylistId(),
                 p.getName(),
                 p.getDescription(),
+                p.getThumbnailUrl(),
                 type);
     }
 
-  
 }

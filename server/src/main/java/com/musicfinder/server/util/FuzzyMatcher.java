@@ -32,56 +32,48 @@ public class FuzzyMatcher {
     }
 
     public List<Songs> suggestSongs(String s, List<Songs> songs) {
+        List<String> titles = new ArrayList<>();
+        for (Songs song : songs) {
+            titles.add(song.getTitle());
+        }
+
         List<Songs> result = new ArrayList<>();
-        if (TextNormalizer.normalize(s).length() < MIN_KEYWORD_LENGTH) {
-            return result;
+        for (int index : topMatches(s, titles)) {
+            result.add(songs.get(index));
         }
-
-        boolean[] used = new boolean[songs.size()];
-
-        for (int count = 0; count < MAX_SUGGESTIONS; count++) {
-            int best = -1;
-            double bestScore = MIN_SCORE;
-
-            for (int i = 0; i < songs.size(); i++) {
-                if (used[i]) {
-                    continue;
-                }
-                double value = score(s, songs.get(i).getTitle());
-                if (value >= MIN_SCORE && (best == -1 || value > bestScore)) {
-                    best = i;
-                    bestScore = value;
-                }
-            }
-
-            if (best == -1) {
-                break;
-            }
-
-            used[best] = true;
-            result.add(songs.get(best));
-        }
-
         return result;
     }
 
     public List<Artists> suggestArtists(String s, List<Artists> artists) {
+        List<String> names = new ArrayList<>();
+        for (Artists artist : artists) {
+            names.add(artist.getArtistName());
+        }
+
         List<Artists> result = new ArrayList<>();
-        if (TextNormalizer.normalize(s).length() < MIN_KEYWORD_LENGTH) {
+        for (int index : topMatches(s, names)) {
+            result.add(artists.get(index));
+        }
+        return result;
+    }
+
+    private List<Integer> topMatches(String keyword, List<String> names) {
+        List<Integer> result = new ArrayList<>();
+        if (TextNormalizer.normalize(keyword).length() < MIN_KEYWORD_LENGTH) {
             return result;
         }
 
-        boolean[] used = new boolean[artists.size()];
+        boolean[] used = new boolean[names.size()]; // tên nào đã chọn rồi thì bỏ qua
 
         for (int count = 0; count < MAX_SUGGESTIONS; count++) {
             int best = -1;
             double bestScore = MIN_SCORE;
 
-            for (int i = 0; i < artists.size(); i++) {
+            for (int i = 0; i < names.size(); i++) {
                 if (used[i]) {
                     continue;
                 }
-                double value = score(s, artists.get(i).getArtistName());
+                double value = score(keyword, names.get(i));
                 if (value >= MIN_SCORE && (best == -1 || value > bestScore)) {
                     best = i;
                     bestScore = value;
@@ -93,7 +85,7 @@ public class FuzzyMatcher {
             }
 
             used[best] = true;
-            result.add(artists.get(best));
+            result.add(best);
         }
 
         return result;

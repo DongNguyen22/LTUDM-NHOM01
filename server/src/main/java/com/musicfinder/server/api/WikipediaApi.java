@@ -74,22 +74,26 @@ public class WikipediaApi {
                 imageUrl = root.getJSONObject("thumbnail").optString("source", null);
             }
 
-            LocalDate birthDate = extractBirthDate(extract);
+            // Lấy hometown và birthDate từ trang HTML
+            PageDetail detail = extractDetailFromPage(exactTitle);
 
-            // Lấy hometown từ bảng Infobox HTML
-            String hometown = extractHometownFromInfobox(exactTitle);
-
-            return new WikiArtist("wiki:page:" + pageId, title, extract, imageUrl, birthDate, hometown);
+            return new WikiArtist("wiki:page:" + pageId, title, extract, imageUrl, detail.birthDate, detail.hometown);
         } catch (Exception e) {
             log.warn("Lỗi gọi Wikipedia API: {}", e.getMessage());
             return null;
         }
     }
 
+    private record PageDetail(LocalDate birthDate, String hometown) {
+    }
+
     /**
-     * Quét bảng Infobox để lấy Quê quán hoặc Nơi sinh
+     * Quét trang HTML và bảng Infobox để lấy Ngày sinh và Quê quán
      */
-    private String extractHometownFromInfobox(String title) {
+    private PageDetail extractDetailFromPage(String title) {
+        String hometown = null;
+        String ancestralHome = null;
+        LocalDate birthDate = null;
         try {
             String pageUrl = "https://vi.wikipedia.org/wiki/"
                     + URLEncoder.encode(title.replace(" ", "_"), StandardCharsets.UTF_8);
@@ -100,38 +104,77 @@ public class WikipediaApi {
                     .timeout(TIMEOUT_MS)
                     .get();
 
-            Element infobox = doc.selectFirst("table.infobox");
-            if (infobox == null)
-                return null;
+            //Quét ngày sinh từ đoạn văn bản giới thiệu đầu trang
+            birthDate = extractBirthDate(doc.text());
 
-            for (Element row : infobox.select("tr")) {
-                Element th = row.selectFirst("th");
-                Element td = row.selectFirst("td");
-                if (th != null && td != null) {
+            //  Quét bảng Infobox
+            Element infobox = doc.selectFirst("table.infobox");
+            if (infobox != null) {
+                for (Element row : infobox.select("tr")) {
+                    Element th = row.selectFirst("th");
+                    Element td = row.selectFirst("td");
+                    if (th == null || td == null)
+                        continue;
+
                     String label = th.text().toLowerCase();
-                    // Bắt các nhãn phổ biến trong bảng thông tin ca sĩ Việt Nam
-                    if (label.contains("quê quán") || label.contains("nơi sinh") || label.contains("nguyên quán")) {
-                        // Loại bỏ các thẻ chú thích wiki dạng [1], [2]
-                        return td.text().replaceAll("\\[\\d+\\]", "").trim();
+
+                    //  thẻ <span class="birthplace"> trong hàng Sinh
+                    Element birthplace = td.selectFirst("span.birthplace");
+                    if (birthplace != null && hometown == null) {
+                        hometown = birthplace.text().replaceAll("\\[\\d+\\]", "").trim();
+                    }
+
+                    //  Hàng nhãn "nơi sinh" hoặc "quê quán"
+                    if (hometown == null && (label.contains("nơi sinh") || label.contains("quê quán"))) {
+                        hometown = td.text().replaceAll("\\[\\d+\\]", "").trim();
+                    }
+
+                    //  Nhãn "nguyên quán"
+                    if (ancestralHome == null && label.contains("nguyên quán")) {
+                        ancestralHome = td.text().replaceAll("\\[\\d+\\]", "").trim();
+                    }
+
+                    // Nếu chưa có ngày sinh, quét thêm trong hàng "Sinh" của Infobox 
+                    if (birthDate == null && label.contains("sinh")) {
+                        birthDate = extractBirthDateFromInfobox(td.text());
                     }
                 }
             }
+
+            if (hometown == null) {
+                hometown = ancestralHome;
+            }
         } catch (Exception ignored) {
-           
         }
-        return null;
+        return new PageDetail(birthDate, hometown);
     }
 
     private LocalDate extractBirthDate(String text) {
         if (text == null || text.isBlank())
             return null;
-        Pattern p1 = Pattern.compile("sinh(?: ngày)?\\s+(\\d{1,2})\\s+tháng\\s+(\\d{1,2})\\s+năm\\s+(\\d{4})");
-        Matcher m1 = p1.matcher(text);
-        if (m1.find()) {
+        Pattern p = Pattern.compile("sinh(?: ngày)?\\s+(\\d{1,2})\\s+tháng\\s+(\\d{1,2})\\s+năm\\s+(\\d{4})");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
             try {
-                return LocalDate.of(Integer.parseInt(m1.group(3)),
-                        Integer.parseInt(m1.group(2)),
-                        Integer.parseInt(m1.group(1)));
+                return LocalDate.of(Integer.parseInt(m.group(3)),
+                        Integer.parseInt(m.group(2)),
+                        Integer.parseInt(m.group(1)));
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private LocalDate extractBirthDateFromInfobox(String text) {
+        if (text == null || text.isBlank())
+            return null;
+        Pattern p = Pattern.compile("(?:sinh(?: ngày)?\\s+)?(\\d{1,2})\\s+tháng\\s+(\\d{1,2})(?:\\s+năm|\\s*,)\\s*(\\d{4})");
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            try {
+                return LocalDate.of(Integer.parseInt(m.group(3)),
+                        Integer.parseInt(m.group(2)),
+                        Integer.parseInt(m.group(1)));
             } catch (Exception ignored) {
             }
         }
