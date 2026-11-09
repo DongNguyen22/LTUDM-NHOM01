@@ -3,6 +3,7 @@ package com.musicfinder.navigation;
 public enum Screen {
     LOGIN("/com/musicfinder/login-view.fxml", "Music Finder - Login", "Login", 1000, 680),
     REGISTER("/com/musicfinder/register-view.fxml", "Music Finder - Register", "Register", 1000, 680),
+    SONG_DETAIL("/com/musicfinder/song-detail-content.fxml", "Music Finder - Song Detail", "Song Detail", 1100, 720),
     HOME("/com/musicfinder/home-content.fxml", "Music Finder - Home", "Discover", 1100, 720),
     SEARCH("/com/musicfinder/search-content.fxml", "Music Finder - Search", "Search", 1100, 720),
     ARTISTS("/com/musicfinder/artists-content.fxml", "Music Finder - Artists", "Artists", 1100, 720),

@@ -110,20 +110,20 @@ public class RequestDispatcher {
                 }
                 case GET_PROFILE: {
                     // Tạm thời lấy username từ field hoặc session
-                    String username = request.getData().path("username").asText("");
-                    UserData data = authService.getProfile(username);
+                    UserData user = authService.getById(userId);
+                    UserData data = authService.getProfile(user.userName());
                     return Response.success(request, data);
                 }
                 case UPDATE_PROFILE: {
-                    String username = request.getData().path("username").asText("");
+                    UserData user = authService.getById(userId);
                     EditProfilePayload payload = request.dataAs(EditProfilePayload.class);
-                    UserData data = authService.updateProfile(username, payload);
+                    UserData data = authService.updateProfile(user.userName(), payload);
                     return Response.success(request, data);
                 }
                 case CHANGE_PASSWORD: {
-                    String username = request.getData().path("username").asText("");
+                    UserData user = authService.getById(userId);
                     ChangePasswordProfilePayload payload = request.dataAs(ChangePasswordProfilePayload.class);
-                    authService.changePassword(username, payload);
+                    authService.changePassword(user.userName(), payload);
                     return Response.success(request, "Đổi mật khẩu thành công");
                 }
 
