@@ -144,7 +144,11 @@ public class LoginController {
 
     @FXML
     private void handleCreateAccount() {
-        showMessage("Register screen will be built after the main screens.", true);
+        try {
+            Navigator.goTo(Screen.REGISTER);
+        } catch (IOException e) {
+            showMessage("Không thể mở trang đăng ký.", false);
+        }
     }
 
     private void showMessage(String message, boolean success) {

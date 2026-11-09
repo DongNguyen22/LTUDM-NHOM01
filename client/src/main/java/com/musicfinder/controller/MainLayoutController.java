@@ -20,6 +20,7 @@ import javafx.scene.layout.StackPane;
 import java.io.IOException;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.musicfinder.player.PlayerListener;
 import com.musicfinder.player.PlayerManager;
@@ -145,6 +146,26 @@ public class MainLayoutController implements PlayerListener {
 
         currentPageLabel.setText(screen.getHeaderTitle());
         setActiveNavigation(screen);
+    }
+    public void show(Screen screen,Consumer onReady) throws IOException {
+        if (screen.isLogin()) {
+            throw new IllegalArgumentException("Login is not content of the main layout.");
+        }
+
+        FXMLLoader loader = new FXMLLoader(
+                MainApp.class.getResource(screen.getFxml()));
+
+        Parent content = loader.load();
+        Object controller = loader.getController();
+        if (controller instanceof SearchController) {
+            searchController = (SearchController) controller;
+            searchController.setMainLayoutController(this);
+        }
+        contentContainer.getChildren().setAll(content);
+
+        currentPageLabel.setText(screen.getHeaderTitle());
+        setActiveNavigation(screen);
+        onReady.accept(controller);
     }
 
     private void setActiveNavigation(Screen activeScreen) {

@@ -1,0 +1,353 @@
+/* Playlist details only. Song rows are populated by the controller. */
+.playlist-song-scroll,
+.playlist-song-scroll>.viewport,
+.playlist-song-page {
+    -fx-background-color: #101014;
+    -fx-font-family: "Segoe UI", "Arial";
+}
+
+.playlist-song-scroll {
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.playlist-song-page .playlist-back {
+    -fx-background-color: transparent;
+    -fx-text-fill: #b9a3d3;
+    -fx-font-size: 11px;
+    -fx-padding: 3 0;
+    -fx-cursor: hand;
+}
+
+.playlist-song-page .playlist-back:hover {
+    -fx-text-fill: #e2c9ff;
+}
+
+.playlist-song-page .playlist-outline-icon {
+    -fx-fill: transparent;
+    -fx-stroke: #a99ab9;
+    -fx-stroke-width: 1.4;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+.playlist-song-page .playlist-hero {
+    -fx-background-color: linear-gradient(to bottom right, #332640, #201b29);
+    -fx-background-radius: 14;
+    -fx-border-color: #3d304b;
+    -fx-border-radius: 14;
+    -fx-padding: 28;
+}
+
+.playlist-song-page .playlist-cover-frame {
+    -fx-background-color: #211a2c;
+    -fx-background-radius: 8;
+}
+
+.playlist-song-page .playlist-eyebrow {
+    -fx-text-fill: #b895ff;
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+}
+
+.playlist-song-page .playlist-detail-title {
+    -fx-text-fill: #fbf7ff;
+    -fx-font-size: 32px;
+    -fx-font-weight: 400;
+}
+
+.playlist-song-page .playlist-description {
+    -fx-text-fill: #b7a6cc;
+    -fx-font-size: 12px;
+}
+
+.playlist-song-page .playlist-metadata {
+    -fx-text-fill: #c7b4dd;
+    -fx-font-size: 10px;
+}
+
+.playlist-song-page .playlist-avatar {
+    -fx-background-color: #bc89d5;
+    -fx-background-radius: 20;
+    -fx-min-width: 22;
+    -fx-max-width: 22;
+    -fx-min-height: 22;
+    -fx-max-height: 22;
+}
+
+.playlist-song-page .playlist-avatar-text {
+    -fx-text-fill: #35203f;
+    -fx-font-size: 8px;
+    -fx-font-weight: 700;
+}
+
+.playlist-song-page .playlist-play-all,
+.playlist-song-page .playlist-edit-button {
+    -fx-background-radius: 8;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 11 18;
+    -fx-cursor: hand;
+}
+
+.playlist-song-page .playlist-play-all {
+    -fx-background-color: linear-gradient(to right, #c698ff, #aa87f3);
+    -fx-text-fill: #251638;
+}
+
+.playlist-song-page .playlist-play-all:hover {
+    -fx-background-color: #d2afff;
+}
+
+.playlist-song-page .playlist-play-all:pressed {
+    -fx-background-color: #a47ce0;
+}
+
+.playlist-song-page .playlist-play-icon {
+    -fx-fill: #29163f;
+    -fx-stroke: transparent;
+}
+
+.playlist-song-page .playlist-edit-button {
+    -fx-background-color: #2a2531;
+    -fx-border-color: #493c55;
+    -fx-border-radius: 8;
+    -fx-text-fill: #f4eafa;
+}
+
+.playlist-song-page .playlist-edit-button .playlist-outline-icon {
+    -fx-stroke: #e4d8ef;
+}
+
+.playlist-song-page .playlist-edit-button:hover {
+    -fx-background-color: #3b3047;
+}
+
+.playlist-song-page .playlist-delete-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 7;
+    -fx-padding: 10;
+    -fx-cursor: hand;
+}
+
+.playlist-song-page .playlist-delete-button:hover {
+    -fx-background-color: #432a39;
+}
+
+.playlist-song-page .playlist-delete-button:hover .playlist-outline-icon {
+    -fx-stroke: #ef98b2;
+}
+
+.playlist-song-page .playlist-detail-message {
+    -fx-text-fill: #c9a0f2;
+    -fx-font-size: 12px;
+}
+
+.playlist-song-page .playlist-song-table {
+    -fx-background-color: #1a191f;
+    -fx-background-radius: 12;
+    -fx-border-color: #29252f;
+    -fx-border-radius: 12;
+}
+
+.playlist-song-page .playlist-song-header {
+    -fx-background-color: #222027;
+    -fx-background-radius: 11 11 0 0;
+    -fx-padding: 18 20;
+}
+
+.playlist-song-page .playlist-column-label {
+    -fx-text-fill: #9b87ad;
+    -fx-font-size: 9px;
+    -fx-font-weight: 700;
+}
+
+/* Optional classes for the song rows you create later. Match header padding and percentages. */
+.playlist-song-page .playlist-song-row {
+    -fx-padding: 14 20;
+    -fx-min-height: 70;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent transparent #2b2731 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.playlist-song-page .playlist-song-row:hover {
+    -fx-background-color: #25202e;
+}
+
+.playlist-song-page .playlist-song-row-last {
+    -fx-border-width: 0;
+    -fx-background-radius: 0 0 11 11;
+}
+
+.playlist-song-page .playlist-song-title {
+    -fx-text-fill: #f5eefc;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.playlist-song-page .playlist-song-artist,
+.playlist-song-page .playlist-song-album,
+.playlist-song-page .playlist-song-duration {
+    -fx-text-fill: #9688a4;
+    -fx-font-size: 10px;
+}
+
+.playlist-song-page .playlist-song-index {
+    -fx-text-fill: #887b96;
+    -fx-font-size: 11px;
+}
+
+.playlist-song-page .playlist-song-action {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-text-fill: #a89ab5;
+    -fx-padding: 6;
+    -fx-cursor: hand;
+}
+
+.playlist-song-page .playlist-song-action:hover {
+    -fx-background-color: #3a2c49;
+    -fx-text-fill: #dbb8ff;
+}
+
+.playlist-song-page .playlist-song-favorite {
+    -fx-text-fill: #e49ecb;
+}
+
+.playlist-song-page .button:focused {
+    -fx-border-color: #b18aff;
+    -fx-border-radius: 7;
+}
+
+.playlist-song-page .button:disabled {
+    -fx-opacity: 0.4;
+}
+
+.playlist-song-scroll .scroll-bar:vertical {
+    -fx-background-color: #101014;
+    -fx-pref-width: 7;
+}
+
+.playlist-song-scroll .scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+.playlist-song-scroll .scroll-bar .thumb {
+    -fx-background-color: #4a3d58;
+    -fx-background-radius: 8;
+}
+
+.playlist-song-scroll .increment-button,
+.playlist-song-scroll .decrement-button {
+    -fx-padding: 0;
+}
+
+.playlist-song-scroll .increment-arrow,
+.playlist-song-scroll .decrement-arrow {
+    -fx-padding: 0;
+    -fx-shape: " ";
+}
+
+
+.playlist-song-page .playlist-song-search {
+    -fx-background-color: #201c29;
+    -fx-background-radius: 9;
+    -fx-border-color: #353042;
+    -fx-border-radius: 9;
+    -fx-border-width: 1;
+    -fx-background-insets: 0;
+    -fx-padding: 10 13;
+    -fx-text-fill: #f3ecfc;
+    -fx-prompt-text-fill: #82788f;
+    -fx-font-size: 12px;
+    -fx-highlight-fill: #66458d;
+    -fx-highlight-text-fill: #ffffff;
+}
+
+.playlist-song-page .playlist-song-search:focused {
+    -fx-border-color: #ac7bf6;
+    -fx-background-color: #252031;
+}
+
+/* Các dòng được tạo bởi createSongRow() */
+.playlist-song-page .favorite-row {
+    -fx-background-color: #1a191f;
+    -fx-padding: 12 20;
+    -fx-min-height: 76;
+    -fx-border-color: transparent transparent #2b2731 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.playlist-song-page .favorite-row:hover {
+    -fx-background-color: #25202e;
+}
+
+.playlist-song-page .favorite-rank {
+    -fx-min-width: 28;
+    -fx-pref-width: 28;
+    -fx-max-width: 28;
+    -fx-text-fill: #887b96;
+    -fx-font-size: 11px;
+}
+
+.playlist-song-page .favorite-cover {
+    -fx-smooth: true;
+}
+
+.playlist-song-page .playlist-song-title {
+    -fx-text-fill: #f5eefc;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-overrun: ellipsis;
+}
+
+.playlist-song-page .playlist-song-artist,
+.playlist-song-page .playlist-duration {
+    -fx-text-fill: #a699b4;
+    -fx-font-size: 11px;
+    -fx-text-overrun: ellipsis;
+}
+
+/* Bao gồm cả nút favorite chưa được gắn class riêng */
+.playlist-song-page .favorite-actions>.button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6;
+    -fx-min-width: 32;
+    -fx-pref-width: 32;
+    -fx-max-width: 32;
+    -fx-min-height: 32;
+    -fx-pref-height: 32;
+    -fx-padding: 5;
+    -fx-text-fill: #ab9ab9;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.playlist-song-page .favorite-actions>.button:hover {
+    -fx-background-color: #3a2c49;
+    -fx-text-fill: #ddbbff;
+}
+
+.playlist-song-page .favorite-icon {
+    -fx-fill: transparent;
+    -fx-stroke: #e49ecb;
+    -fx-stroke-width: 1.6;
+}
+
+.playlist-song-page .favorite-trash-icon {
+    -fx-fill: transparent;
+    -fx-stroke: #a89ab5;
+    -fx-stroke-width: 1.6;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+.playlist-song-page .favorite-action-delete:hover {
+    -fx-background-color: #432a39;
+}
+
+.playlist-song-page .favorite-action-delete:hover .favorite-trash-icon {
+    -fx-stroke: #ef98b2;
+}

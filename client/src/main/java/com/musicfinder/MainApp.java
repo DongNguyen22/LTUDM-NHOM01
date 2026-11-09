@@ -6,7 +6,7 @@ import com.musicfinder.network.ClientConnection;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
-
+import javafx.stage.StageStyle;
 import java.io.IOException;
 
 public class MainApp extends Application {
@@ -20,6 +20,7 @@ public class MainApp extends Application {
         Navigator.goTo(Screen.LOGIN);
 
         stage.centerOnScreen();
+        stage.initStyle(StageStyle.UNDECORATED);
         stage.show();
     }
 
