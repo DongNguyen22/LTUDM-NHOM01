@@ -5,6 +5,7 @@ import com.musicfinder.shared.enums.Action;
 import com.musicfinder.shared.enums.PlayList_Type;
 import com.musicfinder.shared.request.Request;
 import com.musicfinder.shared.request.payload.Add_RemoveToPlaylistPayload;
+import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
 import com.musicfinder.shared.response.Response;
 import com.musicfinder.shared.response.payload.PlayListData;
 import com.musicfinder.shared.response.payload.SongData;
@@ -17,10 +18,14 @@ import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
@@ -92,6 +97,9 @@ public final class AddSongToPlaylistDialog {
         Button cancelButton = (Button) pane.lookupButton(ButtonType.CANCEL);
         addButton = (Button) pane.lookupButton(addType);
         addButton.setDisable(true);
+        addButton.addEventFilter(ActionEvent.ACTION, event -> {
+            handleAddSongToPlaylist(song);
+        });
 
         cancelButton.getStyleClass().add("picker-cancel-btn");
         addButton.getStyleClass().add("picker-add-btn");
@@ -148,9 +156,6 @@ public final class AddSongToPlaylistDialog {
 
     private HBox createPlaylistRow(PlayListData playlist) {
 
-        Label icon = new Label("♫");
-        icon.getStyleClass().add("picker-row-icon");
-
         Label name = new Label(
                 playlist.name() == null
                         ? "Untitled playlist"
@@ -182,10 +187,10 @@ public final class AddSongToPlaylistDialog {
             } else {
                 selectedPlaylists.remove(playlist);
             }
-            addButton.setDisable(selectedPlaylists.isEmpty() ? true : false);
+            addButton.setDisable(selectedPlaylists.isEmpty());
         });
 
-        HBox row = new HBox(12, icon, labels, checkBox);
+        HBox row = new HBox(12, createThumbnail(playlist), labels, checkBox);
 
         row.setAlignment(Pos.CENTER_LEFT);
         row.setMaxWidth(Double.MAX_VALUE);
@@ -231,7 +236,7 @@ public final class AddSongToPlaylistDialog {
             playlistList.getChildren().add(row);
         }
         statusLabel.setText(playlists.isEmpty()
-                ? "You don't have any playlists yet."
+                ? "No playlists match."
                 : "Select a playlist, then click Add to playlist.");
     }
 
@@ -245,5 +250,66 @@ public final class AddSongToPlaylistDialog {
         filterList = originalList.stream().filter(playlist -> keyword.isEmpty() || (playlist.name() != null &&
                 playlist.name().toLowerCase(Locale.ROOT).contains(keyword))).toList();
         renderPlaylists(filterList);
+    }
+
+    private void handleAddSongToPlaylist(SongData song) {
+        List<Long> addPlaylists = new ArrayList<>();
+        for (PlayListData playlist : selectedPlaylists) {
+            addPlaylists.add(playlist.playlistID());
+        }
+        Add_To_PlaylistPayload payload = new Add_To_PlaylistPayload(addPlaylists, song);
+        Request request = Request.of(Action.ADD_TO_PLAYLIST, payload);
+        try {
+            ClientConnection.getInstance().send(request, response -> {
+                Platform.runLater(() -> {
+                    if (!response.isSuccess()) {
+                        StatusDialog.error(owner, response.getMessage());
+                        return;
+                    }
+                    StatusDialog.success(owner, response.getMessage());
+                    return;
+                });
+            });
+        } catch (Exception e) {
+            // TODO: handle exception
+            StatusDialog.error(owner, e.getMessage());
+        }
+    }
+
+    private Node createThumbnail(PlayListData playlist) {
+        Label icon = new Label("♫");
+        icon.getStyleClass().add("picker-row-icon");
+
+        String url = playlist.thumbnailUrl();
+        if (url == null || url.isBlank()) {
+            return icon;
+        }
+
+        try {
+            Image image = new Image(url, 44, 44, false, true, true);
+            ImageView view = new ImageView(image);
+            view.setFitWidth(44);
+            view.setFitHeight(44);
+
+            Rectangle clip = new Rectangle(44, 44);
+            clip.setArcWidth(12);
+            clip.setArcHeight(12);
+            view.setClip(clip);
+
+            view.setVisible(false);
+            image.progressProperty().addListener((obs, oldV, newV) -> {
+                if (newV.doubleValue() >= 1.0 && !image.isError()) {
+                    view.setVisible(true);
+                }
+            });
+
+            StackPane thumb = new StackPane(icon, view);
+            thumb.setMinSize(44, 44);
+            thumb.setPrefSize(44, 44);
+            thumb.setMaxSize(44, 44);
+            return thumb;
+        } catch (IllegalArgumentException ex) { // URL sai định dạng
+            return icon;
+        }
     }
 }

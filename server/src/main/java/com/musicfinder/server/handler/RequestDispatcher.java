@@ -9,6 +9,7 @@ import com.musicfinder.server.service.CacheService;
 import com.musicfinder.shared.request.payload.SongPayload;
 import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.HistoryData;
+import com.musicfinder.shared.response.payload.GetHistorysData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 import com.musicfinder.shared.response.Response;
 import com.musicfinder.shared.response.payload.SearchSongData;
@@ -158,7 +159,7 @@ public class RequestDispatcher {
                         return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
                     }
                     List<HistoryData> lists = historyService.getHistory(userId);
-                    return Response.success(request, lists);
+                    return Response.success(request, new GetHistorysData(lists));
 
                 case REMOVE_ROW_HISTORY: {
                     if (userId == null) {

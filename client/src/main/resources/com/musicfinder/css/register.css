@@ -1,0 +1,27 @@
+/* Uses login.css for the shared brand, inputs and buttons. */
+.register-page .hero-title { -fx-font-size: 40px; }
+.register-page .brand-pane { -fx-min-width: 520; }
+.register-page .register-form-scroll,
+.register-page .register-form-scroll > .viewport,
+.register-page .register-form-side {
+    -fx-background-color: #0f0e14;
+    -fx-background-insets: 0;
+}
+.register-page .register-form-scroll { -fx-padding: 0; }
+.register-page .register-card { -fx-padding: 28 30; -fx-background-radius: 20; }
+.register-page .register-card .login-title { -fx-font-size: 30px; }
+.register-page .register-card .input-wrap { -fx-min-height: 42; -fx-pref-height: 42; }
+.register-page .register-card .form-input { -fx-pref-height: 40; }
+.register-page .register-card .form-input:focused {
+    -fx-background-color: rgba(167,119,255,0.08);
+    -fx-background-radius: 6;
+}
+.register-page .register-card .message-label { -fx-font-size: 11px; }
+.register-page .register-form-scroll .scroll-bar:vertical { -fx-background-color: transparent; -fx-pref-width: 7; }
+.register-page .register-form-scroll .scroll-bar .track { -fx-background-color: transparent; }
+.register-page .register-form-scroll .scroll-bar .thumb { -fx-background-color: #493a5d; -fx-background-radius: 8; }
+.register-page .register-form-scroll .increment-button,
+.register-page .register-form-scroll .decrement-button { -fx-padding: 0; }
+.register-page .register-form-scroll .increment-arrow,
+.register-page .register-form-scroll .decrement-arrow { -fx-padding: 0; -fx-shape: " "; }
+.register-page .register-card .hyperlink:focused { -fx-border-color: #b78cff; -fx-border-radius: 3; }

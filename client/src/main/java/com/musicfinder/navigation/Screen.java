@@ -2,6 +2,7 @@ package com.musicfinder.navigation;
 
 public enum Screen {
     LOGIN("/com/musicfinder/login-view.fxml", "Music Finder - Login", "Login", 1000, 680),
+    REGISTER("/com/musicfinder/register-view.fxml", "Music Finder - Register", "Register", 1000, 680),
     HOME("/com/musicfinder/home-content.fxml", "Music Finder - Home", "Discover", 1100, 720),
     SEARCH("/com/musicfinder/search-content.fxml", "Music Finder - Search", "Search", 1100, 720),
     ARTISTS("/com/musicfinder/artists-content.fxml", "Music Finder - Artists", "Artists", 1100, 720),
@@ -10,7 +11,9 @@ public enum Screen {
     SEARCH_HISTORY("/com/musicfinder/search-history-content.fxml", "Music Finder - Search History", "Search History",
             1100, 720),
     TRENDING("/com/musicfinder/trending-content.fxml", "Music Finder - Trending", "Trending", 1100, 720),
-    PROFILE("/com/musicfinder/profile-content.fxml", "Music Finder - Profile", "Your Profile", 1100, 720);
+    PROFILE("/com/musicfinder/profile-content.fxml", "Music Finder - Profile", "Your Profile", 1100,
+            720),
+    PLAYLIST_SONG("/com/musicfinder/playlist-song-content.fxml","Music Finder - Playlist","Playlist",1100,720);
 
     private final String fxml;
     private final String title;

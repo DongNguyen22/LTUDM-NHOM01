@@ -1,13 +1,20 @@
 package com.musicfinder.navigation;
 
 import com.musicfinder.MainApp;
+import com.musicfinder.controller.ArtistsController;
 import com.musicfinder.controller.MainLayoutController;
+import com.musicfinder.controller.SearchController;
+import com.musicfinder.controller.StatusDialog;
+
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import com.musicfinder.controller.playlist_songController;
+import com.musicfinder.shared.response.payload.PlayListData;
 
 public final class Navigator {
 
@@ -28,7 +35,7 @@ public final class Navigator {
     public static void goTo(Screen screen) throws IOException {
         ensureInitialized();
 
-        if (screen.isLogin()) {
+        if (screen.isLogin() || screen == Screen.REGISTER) {
             showLogin(screen);
             return;
         }
@@ -83,6 +90,59 @@ public final class Navigator {
     private static void ensureInitialized() {
         if (stage == null) {
             throw new IllegalStateException("Navigator has not been initialized.");
+        }
+    }
+
+    public static void seachFromAnotherScreen(
+            String keyword, String searchType) {
+        try {
+            ensureInitialized();
+
+            boolean artist = "artist".equalsIgnoreCase(searchType);
+            boolean song = "song".equalsIgnoreCase(searchType);
+
+            if (!artist && !song) {
+                throw new IllegalArgumentException(
+                        "Loại tìm kiếm không hợp lệ: " + searchType);
+            }
+
+            ensureMainLayout();
+            Screen screen = artist ? Screen.ARTISTS : Screen.SEARCH;
+
+            mainLayoutController.show(screen, controller -> {
+                if (controller instanceof SearchController search) {
+                    search.seachFromAnotherScreen(keyword);
+                } else if (controller instanceof ArtistsController artists) {
+                    artists.seachFromAnotherScreen(keyword);
+                }
+            });
+
+            applyWindowSettings(screen);
+        } catch (IOException | RuntimeException e) {
+            StatusDialog.error(stage.getScene().getWindow(), "Lỗi tìm kiếm");
+        }
+    }
+
+    public static void openPlaylist(PlayListData playlist) {
+        try {
+            ensureInitialized();
+            ensureMainLayout();
+
+            mainLayoutController.show(Screen.PLAYLIST_SONG, controller -> {
+                if (controller instanceof playlist_songController playlistController) {
+                    playlistController.init(playlist);
+                }
+            });
+
+            applyWindowSettings(Screen.PLAYLIST_SONG);
+        } catch (IOException | RuntimeException e) {
+            Alert alert = new Alert(
+                    Alert.AlertType.ERROR);
+
+            alert.setTitle("Lỗi");
+            alert.setHeaderText("Không thể mở playlist");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
         }
     }
 }
