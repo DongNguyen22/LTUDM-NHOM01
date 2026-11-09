@@ -143,7 +143,7 @@ public class MyPlaylistsController {
 
         openButton.getStyleClass().add("open-link");
 
-        openButton.setOnAction(event -> showMessage("Opening: " + playlist.name()));
+        openButton.setOnAction(event -> Navigator.openPlaylist(playlist));
         Region gap = new Region();
         HBox.setHgrow(gap, Priority.ALWAYS);
 
@@ -253,7 +253,7 @@ public class MyPlaylistsController {
         playlistScroller.setHvalue(newValue);
     }
 
-    private void showPlaylistDialog(PlayListData playlist) {
+    public void showPlaylistDialog(PlayListData playlist) {
         boolean isEdit = playlist != null;
         // 1. Tạo Dialog không có thanh tiêu đề Windows
         Dialog<ButtonType> dialog = new Dialog<>();

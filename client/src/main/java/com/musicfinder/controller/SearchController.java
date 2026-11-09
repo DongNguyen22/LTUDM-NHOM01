@@ -294,4 +294,9 @@ public class SearchController {
             });
         }
     }
+
+    public void seachFromAnotherScreen(String keyword) {
+        searchField.setText(keyword);
+        handleSearch();
+    }
 }

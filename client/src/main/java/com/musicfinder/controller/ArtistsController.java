@@ -79,4 +79,13 @@ public class ArtistsController {
     private void showMessage(String message) {
         artistMessageLabel.setText(message);
     }
+
+    public void seachFromAnotherScreen(String keyword) {
+        artistSearchField.setText(keyword);
+        try {
+            handleArtistSearch();
+        } catch (IOException e) {
+            showMessage("Không thể kết nối server: " + e.getMessage());
+        }
+    }
 }
