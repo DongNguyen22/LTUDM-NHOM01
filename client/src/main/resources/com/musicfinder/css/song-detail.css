@@ -1,0 +1,200 @@
+/* Song detail — JavaFX CSS. Scoped to this screen. */
+.song-detail {
+    -fx-background-color: #101116;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+    -fx-focus-color: #b9a0ff;
+    -fx-faint-focus-color: transparent;
+}
+.song-detail > .viewport {
+    -fx-background-color: linear-gradient(to bottom right, #17151f, #101116 65%);
+}
+.song-detail .detail-page {
+    -fx-padding: 30 36 44 36;
+    -fx-spacing: 24;
+}
+.song-detail .label { -fx-text-fill: #f4f1fa; }
+.song-detail .detail-back {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-padding: 7 10;
+    -fx-text-fill: #a8a3b7;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+.song-detail .detail-back:hover {
+    -fx-background-color: #ffffff09;
+    -fx-text-fill: #e4d8ff;
+}
+.song-detail .detail-hero {
+    -fx-padding: 34;
+    -fx-spacing: 32;
+    -fx-background-color: linear-gradient(to bottom right, #30273f, #211e2d 52%, #1b1b25);
+    -fx-background-radius: 22;
+    -fx-border-color: #ffffff14;
+    -fx-border-radius: 22;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, #00000040, 24, 0, 0, 10);
+}
+.song-detail .detail-cover {
+    -fx-background-color: linear-gradient(to bottom right, #34354e, #252238 55%, #4c315c);
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, #00000070, 22, 0.08, 0, 9);
+}
+.song-detail .cover-fallback {
+    -fx-font-size: 66px;
+    -fx-text-fill: #c8b7f2;
+    -fx-opacity: 0.7;
+}
+.song-detail .detail-eyebrow {
+    -fx-text-fill: #c2a6fc;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 3 0;
+}
+.song-detail .detail-title {
+    -fx-text-fill: #faf8ff;
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-line-spacing: 1;
+}
+.song-detail .detail-artist-link {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c4b2e6;
+    -fx-font-size: 14px;
+    -fx-padding: 4 0 0 0;
+}
+.song-detail .detail-metadata {
+    -fx-padding: 10 0 12 0;
+    -fx-hgap: 36;
+    -fx-vgap: 12;
+}
+.song-detail .meta-key {
+    -fx-text-fill: #9690a7;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+.song-detail .meta-value {
+    -fx-text-fill: #e6e0f0;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.song-detail .detail-primary,
+.song-detail .detail-secondary {
+    -fx-min-height: 40;
+    -fx-padding: 10 18;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-background-insets: 0;
+}
+.song-detail .detail-primary {
+    -fx-background-color: linear-gradient(to bottom right, #c5a8ff, #a984ee);
+    -fx-border-color: #d7c3ff40;
+    -fx-text-fill: #221631;
+    -fx-effect: dropshadow(gaussian, #a579eb30, 12, 0, 0, 4);
+}
+.song-detail .detail-primary:hover {
+    -fx-background-color: linear-gradient(to bottom right, #d5bfff, #bc9bf8);
+}
+.song-detail .detail-primary:pressed {
+    -fx-background-color: #a180db;
+    -fx-effect: none;
+}
+.song-detail .detail-secondary {
+    -fx-background-color: #ffffff08;
+    -fx-border-color: #ffffff18;
+    -fx-text-fill: #e6dfef;
+}
+.song-detail .detail-secondary:hover {
+    -fx-background-color: #ffffff13;
+    -fx-border-color: #c8a6ff50;
+}
+.song-detail .detail-secondary:pressed { -fx-background-color: #ffffff20; }
+.song-detail .detail-heart {
+    -fx-min-width: 42;
+    -fx-padding: 5 12;
+    -fx-font-size: 20px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #e7b5d1;
+}
+.song-detail .detail-tabs {
+    -fx-spacing: 8;
+    -fx-padding: 0 0 12 0;
+    -fx-border-color: transparent transparent #ffffff0e transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.song-detail .detail-tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9;
+    -fx-border-radius: 9;
+    -fx-border-color: transparent;
+    -fx-padding: 10 20;
+    -fx-text-fill: #a6a0b6;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+.song-detail .detail-tab:hover {
+    -fx-background-color: #ffffff07;
+    -fx-text-fill: #e6dcf6;
+}
+.song-detail .detail-tab:selected {
+    -fx-background-color: #b38af51a;
+    -fx-border-color: #b38af52b;
+    -fx-text-fill: #d1b7ff;
+}
+.song-detail .detail-card {
+    -fx-background-color: linear-gradient(to bottom right, #201d2a, #191920);
+    -fx-background-radius: 16;
+    -fx-border-color: #ffffff10;
+    -fx-border-radius: 16;
+    -fx-padding: 28;
+    -fx-spacing: 16;
+    -fx-min-height: 180;
+}
+.song-detail .card-title {
+    -fx-text-fill: #f0eaf9;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+.song-detail .detail-muted {
+    -fx-text-fill: #aaa3b9;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 5;
+}
+.song-detail #statusLabel { -fx-padding: 0 2; }
+.song-detail .button:focused,
+.song-detail .detail-tab:focused {
+    -fx-border-color: #cbb0ff;
+    -fx-border-width: 1;
+}
+.song-detail .button:disabled { -fx-opacity: 0.45; }
+.song-detail > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 9;
+    -fx-padding: 3 1;
+}
+.song-detail > .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.song-detail > .scroll-bar:vertical .thumb {
+    -fx-background-color: #655b7b66;
+    -fx-background-radius: 8;
+}
+.song-detail > .scroll-bar:vertical .thumb:hover { -fx-background-color: #8d79ac99; }
+.song-detail > .scroll-bar:vertical .increment-button,
+.song-detail > .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.song-detail > .scroll-bar:vertical .increment-arrow,
+.song-detail > .scroll-bar:vertical .decrement-arrow { -fx-padding: 0; }

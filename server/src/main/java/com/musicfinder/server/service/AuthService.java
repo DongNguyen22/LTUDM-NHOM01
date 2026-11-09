@@ -82,6 +82,11 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại" + username));
         return DtoMapper.toUserData(user);
     }
+    public UserData getById(Long  userId) {
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại" + userId));
+        return DtoMapper.toUserData(user);
+    }
 
     // Cập nhật hồ sơ
     public UserData updateProfile(String username, EditProfilePayload payload) {
@@ -105,7 +110,7 @@ public class AuthService {
 
     // Đổi mật khẩu
     public boolean changePassword(String username, ChangePasswordProfilePayload payload) {
-        String newPassword = payload.password();
+        String newPassword = payload.newPassword();
         if (newPassword == null || newPassword.trim().length() < 6) {
             throw new IllegalArgumentException("Mật khẩu mới phải có ít nhất 6 ký tự!");
         }

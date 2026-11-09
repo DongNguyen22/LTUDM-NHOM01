@@ -25,7 +25,7 @@ public class TestAuth {
             authService.register(null);
         });
         assertEquals("Dữ liệu đăng kí không được để trống", ex.getMessage());
-        
+
     }
 
     @Test
@@ -35,7 +35,7 @@ public class TestAuth {
             authService.register(payload);
         });
         assertEquals("Tên đăng nhập phải ít nhất 3 kí tự!", ex.getMessage());
-        
+
     }
 
     @Test
@@ -78,7 +78,7 @@ public class TestAuth {
     // ================== TEST VALIDATE ĐỔI MẬT KHẨU ==================
     @Test
     void doiMatKhau_MatKhauMoiNgan_PhaiBaoLoi() {
-        ChangePasswordProfilePayload payload = new ChangePasswordProfilePayload("123");
+        ChangePasswordProfilePayload payload = new ChangePasswordProfilePayload("", "123");
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
             authService.changePassword("hiep123", payload);
         });

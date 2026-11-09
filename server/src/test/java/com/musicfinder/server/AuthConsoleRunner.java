@@ -153,7 +153,7 @@ public class AuthConsoleRunner {
         String newPassword = scanner.nextLine().trim();
 
         try {
-            ChangePasswordProfilePayload payload = new ChangePasswordProfilePayload(newPassword);
+            ChangePasswordProfilePayload payload = new ChangePasswordProfilePayload("",newPassword);
             boolean ok = authService.changePassword(username, payload);
 
             if (ok) {

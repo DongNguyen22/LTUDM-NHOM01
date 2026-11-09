@@ -4,6 +4,7 @@ import com.musicfinder.MainApp;
 import com.musicfinder.controller.ArtistsController;
 import com.musicfinder.controller.MainLayoutController;
 import com.musicfinder.controller.SearchController;
+import com.musicfinder.controller.SongDetailController;
 import com.musicfinder.controller.StatusDialog;
 
 import javafx.fxml.FXMLLoader;
@@ -15,6 +16,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import com.musicfinder.controller.playlist_songController;
 import com.musicfinder.shared.response.payload.PlayListData;
+import com.musicfinder.shared.response.payload.SongData;
 
 public final class Navigator {
 
@@ -141,6 +143,28 @@ public final class Navigator {
 
             alert.setTitle("Lỗi");
             alert.setHeaderText("Không thể mở playlist");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        }
+    }
+    public static void openSongDetail(SongData song) {
+        try {
+            ensureInitialized();
+            ensureMainLayout();
+
+            mainLayoutController.show(Screen.SONG_DETAIL, controller -> {
+                if (controller instanceof SongDetailController songDetail) {
+                    songDetail.init(song);
+                }
+            });
+
+            applyWindowSettings(Screen.SONG_DETAIL);
+        } catch (IOException | RuntimeException e) {
+            Alert alert = new Alert(
+                    Alert.AlertType.ERROR);
+
+            alert.setTitle("Lỗi");
+            alert.setHeaderText("Không thể mở Detail Songs");
             alert.setContentText(e.getMessage());
             alert.showAndWait();
         }

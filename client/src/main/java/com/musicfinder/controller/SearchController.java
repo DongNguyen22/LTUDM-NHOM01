@@ -184,6 +184,10 @@ public class SearchController {
 
         titleLabel.getStyleClass().add("song-title");
 
+        titleLabel.setOnMouseClicked(evenr -> {
+            Navigator.openSongDetail(song);
+        });
+
         // ===== ARTIST =====
 
         String artists = song.artistNames() == null ? ""
