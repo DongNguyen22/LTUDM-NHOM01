@@ -17,6 +17,7 @@ import com.musicfinder.shared.response.payload.SearchSongData;
 import com.musicfinder.shared.response.payload.UserData;
 import com.musicfinder.shared.response.payload.ViewArtistDetailData;
 import com.musicfinder.shared.response.payload.ViewArtistSongsData;
+import com.musicfinder.shared.response.payload.VideoData;
 
 import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
@@ -24,6 +25,7 @@ import com.musicfinder.server.service.HistoryService;
 import com.musicfinder.server.service.PlayListService;
 import com.musicfinder.server.service.SearchService;
 import com.musicfinder.server.service.StatisticsService;
+import com.musicfinder.server.service.VideoService;
 import com.musicfinder.shared.enums.Status;
 
 import com.musicfinder.shared.request.Request;
@@ -47,6 +49,9 @@ import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
  * VIEW_SONG_DETAIL {songID} -> data = SongData; đưa data.audio_url vào player HTTP.
  * SEARCH_ARTIST {keyword} -> data = {artists: ArtistData[], suggestions: ArtistData[]}.
  * VIEW_ARTIST_DETAIL {artistID} -> data.artist; VIEW_ARTIST_SONGS {artistID} -> data.songs.
+ * GET_VIDEO {songID | externalId} -> data = {state, play_url, message}.
+ *   state = READY (có play_url, đưa vào Media) hoặc PROCESSING (chờ 2 giây rồi gửi lại cùng request).
+ *   Lỗi (status != SUCCESS) -> dừng polling, hiện message. play_url không lưu lại, mỗi lần mở video hỏi lại server.
  * Giữ đúng tên trường songID, artistID, durations_seconds, audio_url; xử lý giá trị null.
  * TCP 12345 chỉ trả JSON; byte MP3 lấy từ link HTTP 8088. Gọi chi tiết trước mỗi lần phát.
  */
@@ -61,6 +66,7 @@ public class RequestDispatcher {
     private final AuthService authService = new AuthService();
     private final PlayListService playListService;
     private final SearchService searchService;
+    private final VideoService videoService;
     private final CacheService cacheService = new CacheService();
 
     public RequestDispatcher() {
@@ -71,6 +77,7 @@ public class RequestDispatcher {
         searchService = new SearchService(api, cacheService);
         artistService = new ArtistService(cacheService, api, searchService);
         playListService = new PlayListService(searchService);
+        videoService = new VideoService(searchService, api);
     }
 
     public Response handle(String json) {
@@ -211,6 +218,18 @@ public class RequestDispatcher {
                     SongPayload payload = request.dataAs(SongPayload.class);
                     SongData data = searchService.detail(payload.songID(), payload.externalId());
                     return Response.success(request, data);
+                }
+                case GET_VIDEO: {
+                    SongPayload payload = request.dataAs(SongPayload.class);
+                    long start = System.nanoTime();
+                    try {
+                        VideoData data = videoService.getVideo(payload.songID(), payload.externalId());
+                        return Response.success(request, data);
+                    } catch (IllegalStateException e) {
+                        return Response.error(request, Status.ERROR, e.getMessage());
+                    } finally {
+                        System.out.println("GET_VIDEO xử lý trong " + (System.nanoTime() - start) / 1_000_000 + " ms");
+                    }
                 }
                 case SUGGEST: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
