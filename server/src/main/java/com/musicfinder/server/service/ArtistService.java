@@ -34,7 +34,7 @@ public class ArtistService {
     private YtDlpApi api;
     private SearchService searchService;
     private final WikipediaApi wikiApi = new WikipediaApi();
-
+    private final StatisticsService statisticsService = new StatisticsService();
     private final HistoryService historyService = new HistoryService();
     private final Map<Long, Object> artistSongLocks = new ConcurrentHashMap<>();
 
@@ -51,10 +51,12 @@ public class ArtistService {
     }
 
     public SearchArtistData searchArtist(String keyword, Long userId) {
+
         if (keyword == null || keyword.isBlank() || keyword.trim().length() > 255)
             throw new IllegalArgumentException("Từ khóa không hợp lệ");
         keyword = keyword.trim();
-
+        // Ghi nhận thống kê từ khóa loại ca sĩ
+        statisticsService.recordSearch(keyword, "ARTIST");
         SearchArtistData cached = cache.getArtists(keyword);
         if (cached != null) {
             postSearchArtist(keyword, userId, cached.artists());
@@ -104,6 +106,7 @@ public class ArtistService {
             for (Artists artist : fuzzy.suggestArtists(keyword, known))
                 suggestions.add(DtoMapper.toArtistData(artist));
         }
+
         SearchArtistData response = new SearchArtistData(result, suggestions);
         cache.saveArtists(keyword, response, 900);
         postSearchArtist(keyword, userId, result);

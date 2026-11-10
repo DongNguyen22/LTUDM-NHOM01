@@ -9,6 +9,7 @@ import com.musicfinder.server.service.CacheService;
 import com.musicfinder.shared.request.payload.SongPayload;
 import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.HistoryData;
+import com.musicfinder.shared.response.payload.KeywordStatisticData;
 import com.musicfinder.shared.response.payload.GetHistorysData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 import com.musicfinder.shared.response.Response;
@@ -133,6 +134,20 @@ public class RequestDispatcher {
 
                 case GET_TOP_ARTISTS:
                     return Response.success(request, statisticsService.getTopArtists(readLimit(request)));
+
+                case GET_TOP_KEYWORDS: {
+                    String type = null;
+                    int limit = 10;
+                    if (request.getData() != null && !request.getData().isNull()) {
+                        StatisticsPayload payload = request.dataAs(StatisticsPayload.class);
+                        if (payload != null) {
+                            type = payload.type();
+                            limit = payload.limit();
+                        }
+                    }
+                    List<KeywordStatisticData> data = statisticsService.getTopKeywords(type, limit);
+                    return Response.success(request, data);
+                }
 
                 // ===== Ca sĩ =====
                 case VIEW_ARTIST_DETAIL: {

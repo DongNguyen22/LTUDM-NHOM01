@@ -29,7 +29,8 @@ public class SearchService {
     private final SongRepository songRepo;
     private final ArtistRepository artistRepo;
     private final HistoryService historyService;
-
+    private final StatisticsService statisticsService;
+    
     private static final List<String> BAD_WORDS = List.of("karaoke", "reaction", "mix");
     private static final Pattern BAD_TITLE = Pattern.compile(
             "\\b(" + String.join("|", BAD_WORDS) + ")\\b", Pattern.CASE_INSENSITIVE);
@@ -48,16 +49,18 @@ public class SearchService {
     }
 
     public SearchService(YtDlpApi apiService, CacheService cache) {
-        this(apiService, cache, new SongRepository(), new ArtistRepository(), new HistoryService());
+        this(apiService, cache, new SongRepository(), new ArtistRepository(), new HistoryService(), new StatisticsService()
+                                        );
     }
 
     public SearchService(YtDlpApi apiService, CacheService cache, SongRepository songRepo,
-            ArtistRepository artistRepo, HistoryService historyService) {
+        ArtistRepository artistRepo, HistoryService historyService, StatisticsService statisticsService) {
         this.apiService = apiService;
         this.cache = cache;
         this.songRepo = songRepo;
         this.artistRepo = artistRepo;
         this.historyService = historyService;
+        this.statisticsService = statisticsService;
     }
 
     public SearchSongData searchSongs(String keyword, Long userId) {
@@ -73,6 +76,8 @@ public class SearchService {
 
         if (userId != null && userId > 0)
             historyService.recordSearch(userId, keyword, "SONG", data.songs().size());
+        // Ghi nhận thống kê từ khóa loại bài hát
+        statisticsService.recordSearch(keyword, "SONG");
         return data;
     }
 

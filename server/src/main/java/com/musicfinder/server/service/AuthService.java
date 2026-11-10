@@ -82,7 +82,8 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại" + username));
         return DtoMapper.toUserData(user);
     }
-    public UserData getById(Long  userId) {
+
+    public UserData getById(Long userId) {
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại" + userId));
         return DtoMapper.toUserData(user);
@@ -116,6 +117,8 @@ public class AuthService {
         }
         Users user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng " + username));
+        if (!PasswordHash.verifyPassword(payload.currentPassword(), user.getPasswordHash()))
+            throw new IllegalArgumentException("mật khẩu cũ không chính xác");
         String newHash = PasswordHash.hashPassword(newPassword.trim());
 
         // cập nhật vào DB

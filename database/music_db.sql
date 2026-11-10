@@ -145,6 +145,19 @@ CREATE TABLE IF NOT EXISTS SEARCH_CACHE (
     created_at         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     expires_at         TIMESTAMP    NOT NULL
 );
+-- =============================================================================
+-- 8. SEARCH_STATISTICS
+-- Lưu thống kê về các từ khóa tìm kiếm.
+-- Không có FK tới bảng khác theo thiết kế.
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS SEARCH_STATISTICS (
+    statistic_id	    BIGSERIAL	PRIMARY KEY,
+    keyword	            VARCHAR(255)	NOT NULL,	
+    normalized_keyword	VARCHAR(255)	NOT NULL,	
+    search_type	        VARCHAR(20)	    NOT NULL,	
+    search_count	    BIGINT,
+    last_searched_at	TIMESTAMP       
+);
 
 -- =============================================================================
 -- INDEXES
@@ -187,6 +200,12 @@ CREATE INDEX IF NOT EXISTS idx_search_cache_cache_key          ON SEARCH_CACHE(c
 CREATE INDEX IF NOT EXISTS idx_search_cache_expires_at         ON SEARCH_CACHE(expires_at);
 CREATE INDEX IF NOT EXISTS idx_search_cache_normalized_keyword ON SEARCH_CACHE(normalized_keyword);
 
+
+--SEARCH_STATISTICS
+CREATE UNIQUE INDEX IF NOT EXISTS ux_search_stats_keyword_type 
+ON SEARCH_STATISTICS(normalized_keyword, search_type);
+CREATE INDEX IF NOT EXISTS idx_search_stats_trending 
+ON SEARCH_STATISTICS(search_type, search_count DESC);
 
 
 -- =============================================================================

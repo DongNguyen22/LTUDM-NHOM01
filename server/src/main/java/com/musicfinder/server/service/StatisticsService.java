@@ -4,11 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.musicfinder.server.model.Artists;
+import com.musicfinder.server.model.SearchStatistics;
 import com.musicfinder.server.model.Songs;
 import com.musicfinder.server.repository.ArtistRepository;
+import com.musicfinder.server.repository.SearchStatisticsRepository;
 import com.musicfinder.server.repository.SongRepository;
 import com.musicfinder.server.util.DtoMapper;
+import com.musicfinder.server.util.TextNormalizer;
 import com.musicfinder.shared.response.payload.ArtistData;
+import com.musicfinder.shared.response.payload.KeywordStatisticData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 import com.musicfinder.shared.response.payload.SearchSongData;
 import com.musicfinder.shared.response.payload.SongData;
@@ -19,6 +23,7 @@ public class StatisticsService {
     private static final int MAX_LIMIT = 50;
     private final SongRepository songRepo = new SongRepository();
     private final ArtistRepository artistRepo = new ArtistRepository();
+    private final SearchStatisticsRepository statsRepo = new SearchStatisticsRepository();
 
     // GET_TOP_SONGS
     public SearchSongData getTopSongs(int limit) {
@@ -49,6 +54,33 @@ public class StatisticsService {
         return new SearchArtistData(result);
     }
 
+    // Lấy Danh sach từ khoá được tra nhiều nhất
+    public List<KeywordStatisticData> getTopKeywords(String type, int limit) {
+        int safeLimit = normalizeLimit(limit);
+        List<SearchStatistics> list = statsRepo.findTopKeywords(type, safeLimit);
+        List<KeywordStatisticData> result = new ArrayList<>();
+        for (SearchStatistics s : list) {
+            result.add(DtoMapper.toKeywordStatisticData(s));
+        }
+        return result;
+    }
+    //Ghi nhận từ khóa khi người dùng tìm kiếm   nếu chưa có thì save
+       public void recordSearch(String keyword, String searchType) {
+        if (keyword == null || keyword.isBlank()) return;
+        String normalized = TextNormalizer.normalize(keyword.trim());
+        if (normalized.isEmpty()) return;
+        boolean updated = statsRepo.updateSearchCount(normalized, searchType);
+        if (!updated) {
+            statsRepo.save(SearchStatistics.builder()
+                    .keyword(keyword.trim())
+                    .normalizedKeyword(normalized)
+                    .searchType(searchType)
+                    .searchCount(1L)
+                    .build());
+        }
+    }
+
+    // =============================UTIL===========================
     private static int normalizeLimit(int limit) {
         if (limit <= 0) {
             return DEFAULT_LIMIT;
