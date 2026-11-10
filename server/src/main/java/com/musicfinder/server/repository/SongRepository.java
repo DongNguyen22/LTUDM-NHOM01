@@ -164,6 +164,20 @@ public class SongRepository {
         }
     }
 
+    public boolean updateVideoUrlByExternalId(String externalId, String videoUrl) {
+        String sql = "UPDATE SONGS SET video_url = ?, updated_at = CURRENT_TIMESTAMP "
+                + "WHERE external_id = ? AND (video_url IS NULL OR video_url <> ?)";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, videoUrl);
+            ps.setString(2, externalId);
+            ps.setString(3, videoUrl);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new DataException("Không cập nhật được link video bài hát " + externalId, e);
+        }
+    }
+
     // Cập nhật thông tin bài hát
     public boolean update(Songs song) {
         String sql = "UPDATE SONGS SET external_id = ?, title = ?, normalized_title = ?, composer = ?, "

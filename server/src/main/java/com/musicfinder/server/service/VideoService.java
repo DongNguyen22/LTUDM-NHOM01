@@ -16,8 +16,6 @@ import com.musicfinder.server.network.AudioStreamServer;
 import com.musicfinder.shared.response.payload.VideoData;
 
 public class VideoService {
-    private static final String YOUTUBE_PREFIX = "https://www.youtube.com/watch?v=";
-    private static final Pattern VIDEO_ID = Pattern.compile("[A-Za-z0-9_-]{11}");
     private static final Pattern EXTERNAL_ID = Pattern.compile("youtube:video:([A-Za-z0-9_-]{11})");
     private static final long FAILED_COOLDOWN_MS = 30_000;
 
@@ -56,6 +54,7 @@ public class VideoService {
         if (file.isFile() && file.length() > 0 && !Files.isSymbolicLink(file.toPath())) {
             file.setLastModified(System.currentTimeMillis());
             jobs.remove(videoId);
+            saveVideoUrlSafely(videoId);
             System.out.println("VIDEO READY " + videoId + " (kiểm tra " + millisSince(start) + " ms)");
             return new VideoData("READY", AudioStreamServer.getVideoUrl(videoId), null);
         }
@@ -93,6 +92,7 @@ public class VideoService {
         long start = System.nanoTime();
         try {
             api.downloadVideoToCache(videoId);
+            saveVideoUrlSafely(videoId);
             jobs.remove(videoId, job);
             System.out.println("VIDEO tải xong " + videoId + " sau " + millisSince(start) + " ms");
         } catch (IllegalStateException e) {
@@ -101,6 +101,14 @@ public class VideoService {
         } catch (RuntimeException e) {
             e.printStackTrace();
             job.fail("Không tải được video");
+        }
+    }
+
+    private void saveVideoUrlSafely(String videoId) {
+        try {
+            searchService.saveVideoUrl(videoId, AudioStreamServer.getVideoUrl(videoId));
+        } catch (RuntimeException e) {
+            System.out.println("Không lưu được video_url cho " + videoId + ": " + e.getMessage());
         }
     }
 
@@ -117,11 +125,8 @@ public class VideoService {
         }
         if (songId == null || songId <= 0)
             throw new IllegalArgumentException("ID bài hát không hợp lệ");
-        String url = searchService.getSong(songId).video_url();
-        if (url == null || !url.startsWith(YOUTUBE_PREFIX))
-            throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
-        String videoId = url.substring(YOUTUBE_PREFIX.length());
-        if (!VIDEO_ID.matcher(videoId).matches())
+        String videoId = SearchService.youtubeId(searchService.getSong(songId));
+        if (videoId == null)
             throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
         return videoId;
     }

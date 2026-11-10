@@ -30,7 +30,7 @@ public class SearchService {
     private final ArtistRepository artistRepo;
     private final HistoryService historyService;
     private final StatisticsService statisticsService;
-    
+
     private static final List<String> BAD_WORDS = List.of("karaoke", "reaction", "mix");
     private static final Pattern BAD_TITLE = Pattern.compile(
             "\\b(" + String.join("|", BAD_WORDS) + ")\\b", Pattern.CASE_INSENSITIVE);
@@ -49,12 +49,12 @@ public class SearchService {
     }
 
     public SearchService(YtDlpApi apiService, CacheService cache) {
-        this(apiService, cache, new SongRepository(), new ArtistRepository(), new HistoryService(), new StatisticsService()
-                                        );
+        this(apiService, cache, new SongRepository(), new ArtistRepository(), new HistoryService(),
+                new StatisticsService());
     }
 
     public SearchService(YtDlpApi apiService, CacheService cache, SongRepository songRepo,
-        ArtistRepository artistRepo, HistoryService historyService, StatisticsService statisticsService) {
+            ArtistRepository artistRepo, HistoryService historyService, StatisticsService statisticsService) {
         this.apiService = apiService;
         this.cache = cache;
         this.songRepo = songRepo;
@@ -212,20 +212,17 @@ public class SearchService {
 
         SongData cached = cache.getValue(String.valueOf(id), "SONG_DETAIL", SongData.class);
         if (cached != null && cached.audio_url() != null && !cached.audio_url().isBlank()) {
-            String videoId = cached.video_url() != null
-                    && cached.video_url().startsWith("https://www.youtube.com/watch?v=")
-                            ? cached.video_url().replace("https://www.youtube.com/watch?v=", "")
-                            : null;
+            String cachedVideoId = youtubeId(cached);
             File audioDir = new File(System.getProperty("music.audio.directory", "storage/audio"));
-            if (videoId != null && new File(audioDir, videoId + ".mp3").isFile()) {
+            if (cachedVideoId != null && new File(audioDir, cachedVideoId + ".mp3").isFile()) {
                 return cached;
             }
         }
 
         SongData song = getSong(id);
-        if (song.video_url() == null || !song.video_url().startsWith("https://www.youtube.com/watch?v="))
+        String videoId = youtubeId(song);
+        if (videoId == null)
             throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
-        String videoId = song.video_url().replace("https://www.youtube.com/watch?v=", "");
 
         if (apiService.downloadAudioToCache(videoId) == null)
             throw new IllegalStateException("Không chuẩn bị được MP3. Xem lỗi yt-dlp/FFmpeg tại server.");
@@ -243,6 +240,35 @@ public class SearchService {
 
         return result;
 
+    }
+
+    public static String youtubeId(SongData song) {
+        if (song == null)
+            return null;
+        String ext = song.externalId();
+        if (ext != null && ext.matches("youtube:video:[A-Za-z0-9_-]{11}"))
+            return ext.substring("youtube:video:".length());
+        String url = song.video_url();
+        String prefix = "https://www.youtube.com/watch?v=";
+        if (url != null && url.startsWith(prefix) && url.substring(prefix.length()).matches("[A-Za-z0-9_-]{11}"))
+            return url.substring(prefix.length());
+        return null;
+    }
+
+    public void saveVideoUrl(String videoId, String videoUrl) {
+        String externalId = "youtube:video:" + videoId;
+        if (!songRepo.updateVideoUrlByExternalId(externalId, videoUrl))
+            return;
+        Optional<Songs> found = songRepo.findByExternalId(externalId);
+        if (found.isEmpty())
+            return;
+        String key = String.valueOf(found.get().getSongId());
+        SongData cached = cache.getValue(key, "SONG_DETAIL", SongData.class);
+        if (cached != null) {
+            cache.putValue(key, "SONG_DETAIL", new SongData(cached.songID(), cached.title(), cached.composerList(),
+                    cached.artistNames(), cached.durations_seconds(), cached.audio_url(), videoUrl,
+                    cached.thumbnail_url(), cached.searchCount(), cached.preview_url(), cached.externalId()), 900);
+        }
     }
 
     // =====================UTIL========================
