@@ -155,6 +155,18 @@ public class SearchService {
         artist.setArtistName(remote.name());
         artist.setNormalizedName(TextNormalizer.normalize(remote.name()));
         artist.setSearchCount(0L);
+
+        if (remote.externalId() != null && remote.externalId().startsWith("zing:artist:")) {
+            String alias = remote.externalId().substring("zing:artist:".length());
+            ZingMp3Api.ZingArtistDetail detail = zingApi.getArtistDetail(alias);
+            if (detail != null) {
+                artist.setBio(detail.bio());
+                artist.setImageUrl(detail.imageUrl());
+                artist.setBirthDate(detail.birthDate());
+                artist.setHomeTown(detail.hometown());
+            }
+        }
+
         artist = artistRepo.save(artist);
         if (artist.getArtistId() == null)
             throw new IllegalStateException("DB chưa cấp ID ca sĩ/kênh");

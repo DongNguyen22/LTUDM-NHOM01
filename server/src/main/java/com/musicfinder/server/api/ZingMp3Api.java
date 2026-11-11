@@ -10,6 +10,26 @@ import org.json.JSONObject;
 import org.jsoup.Jsoup;
 
 public class ZingMp3Api {
+
+    public record ZingArtist(
+            String id,
+            String name,
+            String alias,
+            String thumbnail,
+            long totalFollow) {
+    }
+
+    public record ZingArtistDetail(
+            String id,
+            String name,
+            String alias,
+            String bio,
+            String imageUrl,
+            java.time.LocalDate birthDate,
+            String hometown,
+            List<YtDlpApi.RemoteSong> songs) {
+    }
+
     private static final String BASE_URL = System.getProperty("music.zing.baseUrl",
             "https://mp3-api-f60g.onrender.com");
     private static final int TIMEOUT_MS = 10_000;
@@ -111,12 +131,14 @@ public class ZingMp3Api {
 
         String artistName = "";
         String artistId = "";
+        String artistAlias = "";
         JSONArray artists = item.optJSONArray("artists");
         if (artists != null && artists.length() > 0) {
             JSONObject first = artists.optJSONObject(0);
             if (first != null) {
                 artistName = first.optString("name", "").trim();
                 artistId = first.optString("id", "");
+                artistAlias = first.optString("alias", "").trim();
             }
         }
         if (artistName.isEmpty())
@@ -124,11 +146,135 @@ public class ZingMp3Api {
         if (artistName.isEmpty())
             artistName = "Nghệ sĩ chưa rõ";
 
-        String artistExternalId = artistId.matches("[A-Za-z0-9]{6,20}")
-                ? "zing:artist:" + artistId
-                : "zing:unknown:" + encodeId;
+        String artistExternalId;
+        if (!artistAlias.isEmpty()) {
+            artistExternalId = "zing:artist:" + artistAlias;
+        } else if (artistId.matches("[A-Za-z0-9]{6,20}")) {
+            artistExternalId = "zing:artist:" + artistId;
+        } else {
+            artistExternalId = "zing:unknown:" + encodeId;
+        }
 
         return new YtDlpApi.RemoteSong("zing:song:" + encodeId, title, duration, null, thumbnail, null,
                 new YtDlpApi.RemoteArtist(artistExternalId, artistName));
+    }
+
+    // Tìm kiếm ca sĩ
+    public List<ZingArtist> searchArtists(String keyword) {
+        List<ZingArtist> result = new ArrayList<>();
+        if (keyword == null || keyword.isBlank())
+            return result;
+
+        try {
+            String body = Jsoup.connect(BASE_URL + "/api/search/artist")
+                    .data("q", keyword.trim())
+                    .ignoreContentType(true)
+                    .timeout(TIMEOUT_MS)
+                    .execute()
+                    .body();
+
+            JSONObject root = new JSONObject(body);
+            if (root.optInt("err", -1) != 0)
+                return result;
+
+            JSONArray artists = root.optJSONObject("data") != null
+                    ? root.getJSONObject("data").optJSONArray("artists")
+                    : null;
+            if (artists == null)
+                return result;
+
+            for (int i = 0; i < artists.length() && result.size() < MAX_RESULTS; i++) {
+                JSONObject a = artists.optJSONObject(i);
+                if (a == null)
+                    continue;
+                String alias = a.optString("alias", "").trim();
+                String name = a.optString("name", "").trim();
+                if (alias.isEmpty() || name.isEmpty())
+                    continue;
+
+                String thumbnail = a.optString("thumbnailM", a.optString("thumbnail", ""));
+                result.add(new ZingArtist(
+                        a.optString("id", ""),
+                        name,
+                        alias,
+                        thumbnail.isEmpty() ? null : thumbnail,
+                        a.optLong("totalFollow", 0)));
+            }
+        } catch (IOException | JSONException e) {
+            System.out.println("Không gọi được Zing search artist: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // Chi tiết nghệ sĩ
+    public ZingArtistDetail getArtistDetail(String alias) {
+        if (alias == null || alias.isBlank())
+            return null;
+
+        try {
+            String body = Jsoup.connect(BASE_URL + "/api/artist")
+                    .data("name", alias.trim())
+                    .ignoreContentType(true)
+                    .timeout(TIMEOUT_MS)
+                    .execute()
+                    .body();
+
+            JSONObject root = new JSONObject(body);
+            if (root.optInt("err", -1) != 0)
+                return null;
+
+            JSONObject data = root.optJSONObject("data");
+            if (data == null)
+                return null;
+
+            String name = data.optString("name", "").trim();
+            String bio = data.optString("biography", "")
+                    .replaceAll("(?i)<br\\s*/?>", "\n")
+                    .trim();
+            String imageUrl = data.optString("thumbnailM", data.optString("thumbnail", null));
+            String hometown = data.optString("national", null);
+
+            java.time.LocalDate birthDate = null;
+            String bdayStr = data.optString("birthday", "");
+            if (!bdayStr.isBlank()) {
+                try {
+                    birthDate = java.time.LocalDate.parse(bdayStr.trim(),
+                            java.time.format.DateTimeFormatter.ofPattern("d/M/yyyy"));
+                } catch (Exception ignored) {
+                }
+            }
+
+            List<YtDlpApi.RemoteSong> songs = new ArrayList<>();
+            JSONArray sections = data.optJSONArray("sections");
+            if (sections != null) {
+                for (int i = 0; i < sections.length(); i++) {
+                    JSONObject sec = sections.optJSONObject(i);
+                    if (sec != null && "song".equalsIgnoreCase(sec.optString("sectionType"))) {
+                        JSONArray items = sec.optJSONArray("items");
+                        if (items != null) {
+                            for (int j = 0; j < items.length() && songs.size() < 5; j++) {
+                                YtDlpApi.RemoteSong song = toRemoteSong(items.optJSONObject(j));
+                                if (song != null)
+                                    songs.add(song);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return new ZingArtistDetail(
+                    data.optString("id", ""),
+                    name,
+                    alias,
+                    bio.isEmpty() ? null : bio,
+                    imageUrl,
+                    birthDate,
+                    hometown,
+                    songs);
+        } catch (IOException | JSONException e) {
+            System.out.println("Không lấy được chi tiết ca sĩ từ Zing: " + e.getMessage());
+            return null;
+        }
     }
 }

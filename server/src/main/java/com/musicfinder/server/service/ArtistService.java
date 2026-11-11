@@ -9,8 +9,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.musicfinder.server.model.Artists;
-import com.musicfinder.server.api.WikipediaApi;
 import com.musicfinder.server.api.YtDlpApi;
+import com.musicfinder.server.api.ZingMp3Api;
 import com.musicfinder.server.util.FuzzyMatcher;
 import com.musicfinder.server.util.TextNormalizer;
 import com.musicfinder.shared.response.payload.ArtistData;
@@ -33,7 +33,7 @@ public class ArtistService {
     private CacheService cache;
     private YtDlpApi api;
     private SearchService searchService;
-    private final WikipediaApi wikiApi = new WikipediaApi();
+    private final ZingMp3Api zingApi = new ZingMp3Api();
     private final StatisticsService statisticsService = new StatisticsService();
     private final HistoryService historyService = new HistoryService();
     private final Map<Long, Object> artistSongLocks = new ConcurrentHashMap<>();
@@ -51,11 +51,10 @@ public class ArtistService {
     }
 
     public SearchArtistData searchArtist(String keyword, Long userId) {
-
         if (keyword == null || keyword.isBlank() || keyword.trim().length() > 255)
             throw new IllegalArgumentException("Từ khóa không hợp lệ");
         keyword = keyword.trim();
-        // Ghi nhận thống kê từ khóa loại ca sĩ
+
         statisticsService.recordSearch(keyword, "ARTIST");
         SearchArtistData cached = cache.getArtists(keyword);
         if (cached != null) {
@@ -64,41 +63,53 @@ public class ArtistService {
         }
 
         List<ArtistData> result = new ArrayList<>();
-        for (Artists artist : artistRepo.searchByName(keyword, 10)) {
 
-            if (artist.getBio() == null || artist.getBio().isBlank()) {
-                WikipediaApi.WikiArtist remote = wikiApi.searchArtist(artist.getArtistName());
-                if (remote != null) {
-                    artist.setBio(remote.bio());
-                    artist.setImageUrl(remote.imageUrl());
-                    artist.setBirthDate(remote.birthDate());
-                    artist.setHomeTown(remote.hometown());
-                    artistRepo.update(artist);
+        // 1. Tìm trong DB
+        for (Artists artist : artistRepo.searchByName(keyword, 10)) {
+            if ((artist.getBio() == null || artist.getBio().isBlank()) && artist.getExternalId() != null) {
+                if (artist.getExternalId().startsWith("zing:artist:")) {
+                    String alias = artist.getExternalId().substring("zing:artist:".length());
+                    ZingMp3Api.ZingArtistDetail detail = zingApi.getArtistDetail(alias);
+                    if (detail != null) {
+                        artist.setBio(detail.bio());
+                        artist.setImageUrl(detail.imageUrl());
+                        artist.setBirthDate(detail.birthDate());
+                        artist.setHomeTown(detail.hometown());
+                        artistRepo.update(artist);
+                    }
                 }
             }
             result.add(DtoMapper.toArtistData(artist));
         }
 
+        // 2. Nếu DB chưa có, gọi Zing MP3
         if (result.isEmpty()) {
-            WikipediaApi.WikiArtist remote = wikiApi.searchArtist(keyword);
-            if (remote != null) {
-                Artists artist = artistRepo.findByExternalId(remote.externalId()).orElseGet(() -> {
+            List<ZingMp3Api.ZingArtist> remoteArtists = zingApi.searchArtists(keyword);
+            for (ZingMp3Api.ZingArtist remote : remoteArtists) {
+                String externalId = "zing:artist:" + remote.alias();
+                Artists artist = artistRepo.findByExternalId(externalId).orElseGet(() -> {
+                    // Lấy thêm chi tiết tiểu sử và ngày sinh
+                    ZingMp3Api.ZingArtistDetail detail = zingApi.getArtistDetail(remote.alias());
                     Artists newArtist = Artists.builder()
-                            .externalId(remote.externalId())
-                            .artistName(remote.name())
+                            .externalId(externalId)
+                            .artistName(detail != null ? detail.name() : remote.name())
                             .normalizedName(TextNormalizer.normalize(remote.name()))
-                            .birthDate(remote.birthDate())
-                            .homeTown(remote.hometown())
-                            .bio(remote.bio())
-                            .imageUrl(remote.imageUrl())
+                            .birthDate(detail != null ? detail.birthDate() : null)
+                            .homeTown(detail != null ? detail.hometown() : null)
+                            .bio(detail != null ? detail.bio() : null)
+                            .imageUrl(detail != null && detail.imageUrl() != null ? detail.imageUrl()
+                                    : remote.thumbnail())
                             .searchCount(1L)
                             .build();
                     return artistRepo.save(newArtist);
                 });
                 result.add(DtoMapper.toArtistData(artist));
+                if (result.size() >= 5)
+                    break; // Lấy tối đa 5 ca sĩ từ API
             }
         }
 
+        // 3. Gợi ý mờ nếu vẫn không thấy
         List<ArtistData> suggestions = new ArrayList<>();
         if (result.isEmpty()) {
             FuzzyMatcher fuzzy = new FuzzyMatcher();
@@ -111,7 +122,6 @@ public class ArtistService {
         cache.saveArtists(keyword, response, 900);
         postSearchArtist(keyword, userId, result);
         return response;
-
     }
 
     // VIEW_ARTIST_DETAIL
@@ -135,35 +145,65 @@ public class ArtistService {
         }
 
         String source = artist.get().getExternalId();
-        if (source == null || !source.startsWith("youtube:channel:")) {
+        if (source == null) {
             return Optional.of(new ViewArtistSongsData(songsInDb(artistId)));
         }
 
-        ViewArtistSongsData cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS",
-                ViewArtistSongsData.class);
-        if (cached != null)
-            return Optional.of(cached);
+        // 1. Trường hợp ca sĩ từ Zing MP3 -> Lấy 40 bài hát nổi bật từ Zing API
+        if (source.startsWith("zing:artist:")) {
+            ViewArtistSongsData cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS",
+                    ViewArtistSongsData.class);
+            if (cached != null && cached.songs() != null && !cached.songs().isEmpty())
+                return Optional.of(cached);
 
-        synchronized (artistSongLocks.computeIfAbsent(artistId, k -> new Object())) {
-            cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS", ViewArtistSongsData.class);
+            synchronized (artistSongLocks.computeIfAbsent(artistId, k -> new Object())) {
+                cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS", ViewArtistSongsData.class);
+                if (cached != null && cached.songs() != null && !cached.songs().isEmpty())
+                    return Optional.of(cached);
+
+                String alias = source.substring("zing:artist:".length());
+                ZingMp3Api.ZingArtistDetail detail = zingApi.getArtistDetail(alias);
+                List<YtDlpApi.RemoteSong> songs = (detail != null && detail.songs() != null)
+                        ? detail.songs()
+                        : java.util.Collections.emptyList();
+
+                ViewArtistSongsData response = new ViewArtistSongsData(mergeSongs(artistId, songs));
+                cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, 900);
+                return Optional.of(response);
+            }
+        }
+
+        // 2. Trường hợp kênh YouTube
+        if (source.startsWith("youtube:channel:")) {
+            ViewArtistSongsData cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS",
+                    ViewArtistSongsData.class);
             if (cached != null)
                 return Optional.of(cached);
 
-            try {
-                List<YtDlpApi.RemoteSong> videos = api.songsForArtist(source);
-                if (videos == null)
-                    throw new IllegalStateException("Không lấy được video của kênh");
-                ViewArtistSongsData response = new ViewArtistSongsData(mergeSongs(artistId, videos));
-                cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, 900);
-                return Optional.of(response);
-            } catch (RuntimeException e) {
-                ViewArtistSongsData old = cache.getValueEvenIfExpired(String.valueOf(artistId),
-                        "ARTIST_SONGS", ViewArtistSongsData.class);
-                if (old != null)
-                    return Optional.of(old);
-                throw e;
+            synchronized (artistSongLocks.computeIfAbsent(artistId, k -> new Object())) {
+                cached = cache.getValue(String.valueOf(artistId), "ARTIST_SONGS", ViewArtistSongsData.class);
+                if (cached != null)
+                    return Optional.of(cached);
+
+                try {
+                    List<YtDlpApi.RemoteSong> videos = api.songsForArtist(source);
+                    if (videos == null)
+                        throw new IllegalStateException("Không lấy được video của kênh");
+                    ViewArtistSongsData response = new ViewArtistSongsData(mergeSongs(artistId, videos));
+                    cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, 900);
+                    return Optional.of(response);
+                } catch (RuntimeException e) {
+                    ViewArtistSongsData old = cache.getValueEvenIfExpired(String.valueOf(artistId),
+                            "ARTIST_SONGS", ViewArtistSongsData.class);
+                    if (old != null)
+                        return Optional.of(old);
+                    throw e;
+                }
             }
         }
+
+        // Mặc định trả về các bài đã có trong DB
+        return Optional.of(new ViewArtistSongsData(songsInDb(artistId)));
     }
 
     private List<SongData> songsInDb(Long artistId) {
@@ -174,10 +214,12 @@ public class ArtistService {
         return result;
     }
 
+    private static final int MAX_ARTIST_SONGS = 5;
+
     private List<SongData> mergeSongs(Long artistId, List<YtDlpApi.RemoteSong> videos) {
         List<SongData> result = songsInDb(artistId);
-        if (result.size() > YtDlpApi.MAX_RESULTS)
-            result = new ArrayList<>(result.subList(0, YtDlpApi.MAX_RESULTS));
+        if (result.size() > MAX_ARTIST_SONGS)
+            result = new ArrayList<>(result.subList(0, MAX_ARTIST_SONGS));
 
         Set<String> seen = new HashSet<>();
         for (SongData song : result) {
@@ -186,7 +228,7 @@ public class ArtistService {
         }
 
         for (YtDlpApi.RemoteSong video : videos) {
-            if (result.size() >= YtDlpApi.MAX_RESULTS)
+            if (result.size() >= MAX_ARTIST_SONGS)
                 break;
             if (seen.add(video.externalId()))
                 result.add(searchService.toResultSong(video));
