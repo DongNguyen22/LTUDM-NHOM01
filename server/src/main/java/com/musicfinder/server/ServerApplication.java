@@ -4,6 +4,7 @@ import com.musicfinder.server.handler.RequestDispatcher;
 import com.musicfinder.server.network.TcpServer;
 import com.musicfinder.server.network.AudioStreamServer;
 import com.musicfinder.server.api.YtDlpApi;
+import com.musicfinder.server.api.ZingMp3Api;
 
 public class ServerApplication {
     private static final int PORT = 12345;
@@ -16,6 +17,10 @@ public class ServerApplication {
         AudioStreamServer audioServer = new AudioStreamServer();
         if (!audioServer.start())
             return;
+        // Đánh thức Zing MP3 ở luồng nền để lần tìm kiếm đầu tiên không bị timeout
+        Thread warmUp = new Thread(() -> new ZingMp3Api().warmUp(), "zing-warmup");
+        warmUp.setDaemon(true);
+        warmUp.start();
         RequestDispatcher dispatcher = new RequestDispatcher();
         TcpServer server = new TcpServer(PORT, dispatcher, CORE_POOL_SIZE, MAX_POOL_SIZE);
 

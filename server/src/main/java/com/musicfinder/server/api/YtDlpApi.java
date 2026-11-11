@@ -357,6 +357,26 @@ public class YtDlpApi {
         return readSongs(result);
     }
 
+    public String findMatchingVideoId(String songTitle, String artistName, int durationSeconds) {
+        if (songTitle == null || songTitle.isBlank())
+            return null;
+        String query = songTitle.trim() + " " + (artistName == null ? "" : artistName.trim()) + " audio";
+        JSONObject result = execute(List.of("--flat-playlist", "--playlist-end", "3",
+                "--", "ytsearch3:" + query.trim()));
+        if (result == null)
+            return null;
+        String first = null;
+        for (RemoteSong song : readSongs(result)) {
+            String id = song.externalId().substring("youtube:video:".length());
+            if (first == null)
+                first = id;
+            if (durationSeconds > 0 && song.durationSeconds() > 0
+                    && Math.abs(song.durationSeconds() - durationSeconds) <= 15)
+                return id;
+        }
+        return first;
+    }
+
     public List<RemoteArtist> searchArtists(String keyword) {
         if (keyword == null || keyword.isBlank())
             return new ArrayList<>();

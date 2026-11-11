@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import com.musicfinder.server.api.YtDlpApi;
+import com.musicfinder.server.api.ZingMp3Api;
 import com.musicfinder.server.model.Artists;
 import com.musicfinder.server.model.Songs;
 import com.musicfinder.server.network.AudioStreamServer;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SearchService {
     private final YtDlpApi apiService;
+    private final ZingMp3Api zingApi = new ZingMp3Api();
     private final CacheService cache;
     private final SongRepository songRepo;
     private final ArtistRepository artistRepo;
@@ -89,7 +91,11 @@ public class SearchService {
                 return cached;
 
             try {
-                List<YtDlpApi.RemoteSong> found = apiService.searchSongs(keyword);
+                List<YtDlpApi.RemoteSong> found = zingApi.searchSongs(keyword);
+                if (found.isEmpty()) {
+                    System.out.println("Zing MP3 không có kết quả, chuyển sang yt-dlp: " + keyword);
+                    found = apiService.searchSongs(keyword);
+                }
                 SearchSongData data = buildResult(keyword, found);
                 cache.saveSongs(keyword, data, LIST_CACHE_SECONDS);
                 return data;
@@ -179,7 +185,7 @@ public class SearchService {
     }
 
     public Long ensureSong(String externalId) {
-        if (externalId == null || !externalId.matches("youtube:video:[A-Za-z0-9_-]{11}"))
+        if (externalId == null || !externalId.matches("youtube:video:[A-Za-z0-9_-]{11}|zing:song:[A-Za-z0-9]{6,20}"))
             throw new IllegalArgumentException("Mã bài hát không hợp lệ");
 
         Optional<Songs> found = songRepo.findByExternalId(externalId);
@@ -220,7 +226,7 @@ public class SearchService {
         }
 
         SongData song = getSong(id);
-        String videoId = youtubeId(song);
+        String videoId = resolveVideoId(song);
         if (videoId == null)
             throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
 
@@ -231,7 +237,21 @@ public class SearchService {
         if (!songRepo.updateAudioUrl(id, audioUrl))
             throw new IllegalStateException("Không cập nhật được link audio vào DB");
 
-        SongData result = new SongData(song.songID(), song.title(), song.composerList(), song.artistNames(),
+        String composer = song.composerList();
+        if ((composer == null || composer.isBlank()) && song.externalId() != null
+                && song.externalId().startsWith("zing:song:")) {
+            String found = zingApi.getComposer(song.externalId().substring("zing:song:".length()));
+            if (found != null) {
+                try {
+                    songRepo.updateComposer(id, found);
+                    composer = found;
+                } catch (RuntimeException e) {
+                    System.out.println("Không lưu được nhạc sĩ: " + e.getMessage());
+                }
+            }
+        }
+
+        SongData result = new SongData(song.songID(), song.title(), composer, song.artistNames(),
                 song.durations_seconds(), audioUrl, song.video_url(), song.thumbnail_url(),
                 song.searchCount(), song.preview_url(), song.externalId());
 
@@ -252,17 +272,44 @@ public class SearchService {
         String prefix = "https://www.youtube.com/watch?v=";
         if (url != null && url.startsWith(prefix) && url.substring(prefix.length()).matches("[A-Za-z0-9_-]{11}"))
             return url.substring(prefix.length());
-        return null;
+        String fromVideo = idFromServerUrl(url);
+        return fromVideo != null ? fromVideo : idFromServerUrl(song.audio_url());
     }
 
-    public void saveVideoUrl(String videoId, String videoUrl) {
-        String externalId = "youtube:video:" + videoId;
-        if (!songRepo.updateVideoUrlByExternalId(externalId, videoUrl))
+    private static final Pattern SERVER_FILE_URL = Pattern
+            .compile("/(?:audio|video)/([A-Za-z0-9_-]{11})\\.(?:mp3|mp4)$");
+
+    private static String idFromServerUrl(String url) {
+        if (url == null)
+            return null;
+        java.util.regex.Matcher m = SERVER_FILE_URL.matcher(url);
+        return m.find() ? m.group(1) : null;
+    }
+
+    public String resolveVideoId(SongData song) {
+        String videoId = youtubeId(song);
+        if (videoId == null && song.externalId() != null && song.externalId().startsWith("zing:song:")) {
+            String artist = song.artistNames() == null || song.artistNames().isEmpty() ? "" : song.artistNames().get(0);
+            int seconds = song.durations_seconds() == null ? 0 : song.durations_seconds();
+            videoId = apiService.findMatchingVideoId(song.title(), artist, seconds);
+            if (videoId == null)
+                throw new IllegalStateException("Không tìm được nguồn phát cho bài hát này");
+            System.out.println("Audio Bridge: " + song.title() + " -> YouTube " + videoId);
+        }
+        return videoId;
+    }
+
+    public void saveVideoUrl(Long songId, String videoId, String videoUrl) {
+        Long id = songId;
+        if (id == null || id <= 0) {
+            Optional<Songs> found = songRepo.findByExternalId("youtube:video:" + videoId);
+            if (found.isEmpty())
+                return;
+            id = found.get().getSongId();
+        }
+        if (!songRepo.updateVideoUrl(id, videoUrl))
             return;
-        Optional<Songs> found = songRepo.findByExternalId(externalId);
-        if (found.isEmpty())
-            return;
-        String key = String.valueOf(found.get().getSongId());
+        String key = String.valueOf(id);
         SongData cached = cache.getValue(key, "SONG_DETAIL", SongData.class);
         if (cached != null) {
             cache.putValue(key, "SONG_DETAIL", new SongData(cached.songID(), cached.title(), cached.composerList(),

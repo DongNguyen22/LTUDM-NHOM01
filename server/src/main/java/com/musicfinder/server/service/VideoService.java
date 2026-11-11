@@ -47,6 +47,10 @@ public class VideoService {
     }
 
     public VideoData getVideo(Long songId, String externalId) {
+        if (externalId != null && !externalId.isBlank() && !EXTERNAL_ID.matcher(externalId.trim()).matches()) {
+            songId = searchService.ensureSong(externalId.trim());
+            externalId = null;
+        }
         String videoId = resolveVideoId(songId, externalId);
         long start = System.nanoTime();
 
@@ -54,7 +58,7 @@ public class VideoService {
         if (file.isFile() && file.length() > 0 && !Files.isSymbolicLink(file.toPath())) {
             file.setLastModified(System.currentTimeMillis());
             jobs.remove(videoId);
-            saveVideoUrlSafely(videoId);
+            saveVideoUrlSafely(songId, videoId);
             System.out.println("VIDEO READY " + videoId + " (kiểm tra " + millisSince(start) + " ms)");
             return new VideoData("READY", AudioStreamServer.getVideoUrl(videoId), null);
         }
@@ -68,18 +72,18 @@ public class VideoService {
             Job fresh = new Job();
             if (!jobs.replace(videoId, existing, fresh))
                 return processing();
-            return startDownload(videoId, fresh);
+            return startDownload(songId, videoId, fresh);
         }
 
         Job job = new Job();
         if (jobs.putIfAbsent(videoId, job) != null)
             return processing();
-        return startDownload(videoId, job);
+        return startDownload(songId, videoId, job);
     }
 
-    private VideoData startDownload(String videoId, Job job) {
+    private VideoData startDownload(Long songId, String videoId, Job job) {
         try {
-            executor.execute(() -> download(videoId, job));
+            executor.execute(() -> download(songId, videoId, job));
         } catch (RejectedExecutionException e) {
             jobs.remove(videoId, job);
             throw new IllegalStateException("Server đang bận tải video, vui lòng thử lại sau");
@@ -88,11 +92,11 @@ public class VideoService {
         return processing();
     }
 
-    private void download(String videoId, Job job) {
+    private void download(Long songId, String videoId, Job job) {
         long start = System.nanoTime();
         try {
             api.downloadVideoToCache(videoId);
-            saveVideoUrlSafely(videoId);
+            saveVideoUrlSafely(songId, videoId);
             jobs.remove(videoId, job);
             System.out.println("VIDEO tải xong " + videoId + " sau " + millisSince(start) + " ms");
         } catch (IllegalStateException e) {
@@ -104,9 +108,9 @@ public class VideoService {
         }
     }
 
-    private void saveVideoUrlSafely(String videoId) {
+    private void saveVideoUrlSafely(Long songId, String videoId) {
         try {
-            searchService.saveVideoUrl(videoId, AudioStreamServer.getVideoUrl(videoId));
+            searchService.saveVideoUrl(songId, videoId, AudioStreamServer.getVideoUrl(videoId));
         } catch (RuntimeException e) {
             System.out.println("Không lưu được video_url cho " + videoId + ": " + e.getMessage());
         }
@@ -125,7 +129,7 @@ public class VideoService {
         }
         if (songId == null || songId <= 0)
             throw new IllegalArgumentException("ID bài hát không hợp lệ");
-        String videoId = SearchService.youtubeId(searchService.getSong(songId));
+        String videoId = searchService.resolveVideoId(searchService.getSong(songId));
         if (videoId == null)
             throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
         return videoId;
