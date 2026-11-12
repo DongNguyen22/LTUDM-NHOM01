@@ -11,6 +11,7 @@ import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.HistoryData;
 import com.musicfinder.shared.response.payload.KeywordStatisticData;
 import com.musicfinder.shared.response.payload.GetHistorysData;
+import com.musicfinder.shared.response.payload.GetTopSearchData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 import com.musicfinder.shared.response.Response;
 import com.musicfinder.shared.response.payload.SearchSongData;
@@ -152,7 +153,8 @@ public class RequestDispatcher {
                             limit = payload.limit();
                         }
                     }
-                    List<KeywordStatisticData> data = statisticsService.getTopKeywords(type, limit);
+                    List<KeywordStatisticData> keyword = statisticsService.getTopKeywords(type, limit);
+                    GetTopSearchData data = new GetTopSearchData(keyword, type);
                     return Response.success(request, data);
                 }
 

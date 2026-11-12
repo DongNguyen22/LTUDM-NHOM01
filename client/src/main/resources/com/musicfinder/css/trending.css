@@ -247,7 +247,6 @@
     -fx-padding: 17 18 17 18;
     -fx-min-height: 245;
 }
-.lower-panel { -fx-min-height: 155; }
 .panel-title { -fx-text-fill: #ffffff; -fx-font-size: 16px; -fx-font-weight: 800; }
 .panel-subtitle { -fx-text-fill: #746d7d; -fx-font-size: 9px; -fx-padding: 0 0 8 0; }
 .bar-row { -fx-min-height: 25; }
@@ -263,35 +262,6 @@
 .bar-fill-alt { -fx-background-color: linear-gradient(to right, #7254c8, #a178e9); }
 .artist-bar-row { -fx-min-height: 29; }
 
-.chart-panel { -fx-min-width: 390; }
-.trend-chart {
-    -fx-background-color: transparent;
-    -fx-padding: 0;
-}
-.trend-chart .chart-content { -fx-padding: 0; }
-.trend-chart .chart-plot-background { -fx-background-color: transparent; }
-.trend-chart .chart-vertical-grid-lines { -fx-stroke: transparent; }
-.trend-chart .chart-horizontal-grid-lines {
-    -fx-stroke: #37313f;
-    -fx-stroke-dash-array: 3 3;
-    -fx-opacity: 0.65;
-}
-.trend-chart .axis { -fx-opacity: 0; }
-.trend-chart .chart-series-line {
-    -fx-stroke: #b287ff;
-    -fx-stroke-width: 2.1px;
-}
-.day-label-row { -fx-padding: 0 5 0 5; }
-.day-label { -fx-text-fill: #71677b; -fx-font-size: 8px; }
-
-.ranking-row {
-    -fx-padding: 6 0 6 0;
-    -fx-border-color: transparent transparent #2a2630 transparent;
-    -fx-border-width: 0 0 1 0;
-}
-.ranking-number { -fx-text-fill: #aa7bff; -fx-font-size: 12px; -fx-font-weight: 800; -fx-min-width: 25; }
-.ranking-title { -fx-text-fill: #f8f3fb; -fx-font-size: 9px; -fx-font-weight: 700; }
-.ranking-subtitle { -fx-text-fill: #746b7e; -fx-font-size: 8px; }
 
 /* ===== Shared shell (sidebar / topbar / player) — đồng bộ giữa các màn ===== */
 .logo-box { -fx-background-radius: 12; }
@@ -353,11 +323,6 @@
 .rank-number { -fx-font-size: 11px; }
 .bar-name { -fx-font-size: 11px; }
 .bar-value { -fx-font-size: 10px; }
-.day-label { -fx-font-size: 10px; }
-.ranking-row { -fx-padding: 8 0 8 0; }
-.ranking-number { -fx-font-size: 14px; }
-.ranking-title { -fx-font-size: 12px; }
-.ranking-subtitle { -fx-font-size: 10px; }
 
 /* ===== Sidebar hover — thống nhất cho mọi mục (kể cả Favorites có badge) ===== */
 .nav-button:hover { -fx-background-color: #1b1821; -fx-text-fill: #ffffff; }
@@ -391,3 +356,44 @@
 .nav-button.bottom-nav:hover { -fx-background-color: #1b1821; -fx-text-fill: #ffffff; }
 .nav-button.bottom-nav:focused { -fx-background-color: transparent; -fx-background-insets: 0; }
 .nav-button.bottom-nav:hover:focused { -fx-background-color: #1b1821; }
+
+/* ===== Trending — theo bản thiết kế (2 stat card, Top songs | Top artists, Ranking) ===== */
+.page-content { -fx-background-color: #111015; }
+.content-scroll, .content-scroll > .viewport { -fx-background-color: #111015; }
+.eyebrow { -fx-text-fill: #8f8cf2; -fx-font-weight: 800; }
+.page-title { -fx-text-fill: #ffffff; -fx-font-size: 30px; -fx-font-weight: 400; }
+.page-subtitle { -fx-text-fill: #8a8496; }
+
+.stat-card, .panel-card {
+    -fx-background-color: #1c1b22;
+    -fx-border-color: #2a2831;
+    -fx-border-width: 1;
+}
+.stat-card { -fx-min-height: 120; }
+.stat-icon-purple { -fx-background-color: #4d3a6e; }
+.stat-icon-pink { -fx-background-color: #5c3049; }
+.stat-svg-pink { -fx-stroke: #f0a6d2; }
+.metric-label { -fx-text-fill: #8a8396; -fx-font-weight: 800; }
+.metric-title { -fx-text-fill: #ffffff; -fx-font-size: 18px; -fx-font-weight: 800; }
+.metric-subtitle { -fx-text-fill: #8a8396; }
+
+.panel-card { -fx-min-height: 240; }
+.panel-title { -fx-text-fill: #ffffff; -fx-font-size: 18px; -fx-font-weight: 800; }
+.panel-subtitle { -fx-text-fill: #8f8cf2; -fx-padding: 0 0 12 0; }
+
+/* Dòng thanh xếp hạng (dùng chung cho Top songs và Top artists) */
+.bar-row { -fx-min-height: 30; -fx-alignment: center-left; -fx-spacing: 10; }
+.rank-number { -fx-text-fill: #8f8cf2; -fx-font-size: 11px; -fx-min-width: 24; }
+.bar-name { -fx-text-fill: #f4f1f8; -fx-font-size: 11px; -fx-font-weight: 700; -fx-min-width: 150; -fx-pref-width: 150; }
+.bar-track {
+    -fx-background-color: #34313c;
+    -fx-background-radius: 6;
+    -fx-min-height: 6; -fx-pref-height: 6; -fx-max-height: 6;
+}
+.bar-fill, .bar-fill-alt {
+    -fx-background-color: linear-gradient(to right, #8e62f0, #b48cff);
+    -fx-background-radius: 6;
+    -fx-min-height: 6; -fx-pref-height: 6; -fx-max-height: 6;
+}
+.bar-fill-alt { -fx-background-color: linear-gradient(to right, #7a5ad6, #a37df0); }
+.bar-value { -fx-text-fill: #857e90; -fx-font-size: 10px; -fx-min-width: 44; -fx-alignment: center-right; }
