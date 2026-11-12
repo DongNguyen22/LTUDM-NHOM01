@@ -6,6 +6,7 @@ import org.json.JSONArray;
 import com.musicfinder.shared.response.payload.SongData;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -95,7 +96,6 @@ public class YtDlpApi {
         }
     }
 
-    // Tự chuẩn bị FFmpeg/ffprobe trên Windows; không cần cài vào PATH.
     public static synchronized boolean prepareAudioTools() {
         boolean windows = System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
         File tools = new File("tools");
@@ -234,6 +234,113 @@ public class YtDlpApi {
         }
     }
 
+    public File downloadVideoToCache(String videoId) {
+        if (videoId == null || !videoId.matches("[A-Za-z0-9_-]{11}"))
+            throw new IllegalArgumentException("Mã video không hợp lệ");
+        File directory = new File(System.getProperty("music.video.directory", "storage/video"));
+        File video = new File(directory, videoId + ".mp4");
+        File pending = new File(directory, videoId + ".download.mp4");
+        File faststart = new File(directory, videoId + ".fast.mp4");
+        if (video.isFile() && video.length() > 0 && !Files.isSymbolicLink(video.toPath())) {
+            video.setLastModified(System.currentTimeMillis());
+            return video;
+        }
+        if (binaryPath == null || !prepareAudioTools())
+            throw new IllegalStateException("Server chưa sẵn sàng tải video (thiếu yt-dlp hoặc FFmpeg)");
+        if (!directory.isDirectory() && !directory.mkdirs())
+            throw new IllegalStateException("Server không tạo được thư mục lưu video");
+
+        boolean windows = System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
+        File tools = new File("tools");
+        String ffmpeg = new File(tools, windows ? "ffmpeg.exe" : "ffmpeg").getAbsolutePath();
+        String ffprobe = new File(tools, windows ? "ffprobe.exe" : "ffprobe").getAbsolutePath();
+        Process process = null;
+        try {
+            System.out.println("Đang tải video MP4: " + videoId);
+            String format = "b[ext=mp4][vcodec^=avc1][height<=360]/18/"
+                    + "bv*[ext=mp4][vcodec^=avc1][height<=360]+ba[ext=m4a]";
+            String[] command = { binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
+                    "--force-overwrites", "--socket-timeout", "20", "--retries", "1",
+                    "--extractor-retries", "1", "--ffmpeg-location", ffmpeg,
+                    "-f", format, "--merge-output-format", "mp4", "--max-filesize", "100M",
+                    "-o", new File(directory, videoId + ".download.%(ext)s").getAbsolutePath(),
+                    "--", "https://www.youtube.com/watch?v=" + videoId };
+            process = new ProcessBuilder(command).inheritIO().start();
+            if (!process.waitFor(180, TimeUnit.SECONDS))
+                throw new IllegalStateException("Tải video quá thời gian chờ 180 giây");
+            if (process.exitValue() != 0 || !pending.isFile() || pending.length() == 0)
+                throw new IllegalStateException(
+                        "Không tải được video (video bị chặn, riêng tư hoặc không có định dạng MP4 phù hợp)");
+
+            String probe = runTool(new String[] { ffprobe, "-v", "error", "-show_entries",
+                    "stream=codec_name,codec_type", "-of", "csv=p=0", pending.getAbsolutePath() }, 30);
+            boolean h264 = false;
+            boolean aac = false;
+            if (probe != null) {
+                for (String line : probe.split("\\R")) {
+                    String lower = line.toLowerCase(Locale.ROOT);
+                    if (lower.contains("video") && lower.contains("h264"))
+                        h264 = true;
+                    if (lower.contains("audio") && lower.contains("aac"))
+                        aac = true;
+                }
+            }
+            if (!h264 || !aac)
+                throw new IllegalStateException("Định dạng video không tương thích với trình phát");
+
+            if (runTool(new String[] { ffmpeg, "-y", "-v", "error", "-i", pending.getAbsolutePath(),
+                    "-c", "copy", "-movflags", "+faststart", faststart.getAbsolutePath() }, 60) == null
+                    || !faststart.isFile() || faststart.length() == 0)
+                throw new IllegalStateException("Không xử lý được file video sau khi tải");
+
+            Files.move(faststart.toPath(), video.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            video.setLastModified(System.currentTimeMillis());
+            return video;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Việc tải video bị hủy");
+        } catch (IOException e) {
+            System.out.println("Không chạy được yt-dlp/FFmpeg cho video: " + e.getMessage());
+            throw new IllegalStateException("Server chưa sẵn sàng tải video");
+        } finally {
+            if (process != null) {
+                for (ProcessHandle child : process.descendants().toList())
+                    child.destroyForcibly();
+                process.destroyForcibly();
+            }
+            File[] leftovers = directory.listFiles((dir, name) -> name.startsWith(videoId + ".download")
+                    || name.equals(videoId + ".fast.mp4"));
+            if (leftovers != null) {
+                for (File leftover : leftovers) {
+                    try {
+                        Files.deleteIfExists(leftover.toPath());
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        }
+    }
+
+    private static String runTool(String[] command, int timeoutSeconds) throws IOException, InterruptedException {
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        try {
+            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
+                System.out.println("Công cụ chạy quá " + timeoutSeconds + " giây: " + new File(command[0]).getName());
+                return null;
+            }
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            if (process.exitValue() != 0) {
+                System.out.println("Công cụ báo lỗi: " + new File(command[0]).getName() + " " + output.trim());
+                return null;
+            }
+            return output;
+        } finally {
+            for (ProcessHandle child : process.descendants().toList())
+                child.destroyForcibly();
+            process.destroyForcibly();
+        }
+    }
+
     public List<RemoteSong> searchSongs(String keyword) {
         return searchSongs(keyword, MAX_RESULTS);
     }
@@ -248,6 +355,26 @@ public class YtDlpApi {
         if (result == null)
             return null;
         return readSongs(result);
+    }
+
+    public String findMatchingVideoId(String songTitle, String artistName, int durationSeconds) {
+        if (songTitle == null || songTitle.isBlank())
+            return null;
+        String query = songTitle.trim() + " " + (artistName == null ? "" : artistName.trim()) + " audio";
+        JSONObject result = execute(List.of("--flat-playlist", "--playlist-end", "3",
+                "--", "ytsearch3:" + query.trim()));
+        if (result == null)
+            return null;
+        String first = null;
+        for (RemoteSong song : readSongs(result)) {
+            String id = song.externalId().substring("youtube:video:".length());
+            if (first == null)
+                first = id;
+            if (durationSeconds > 0 && song.durationSeconds() > 0
+                    && Math.abs(song.durationSeconds() - durationSeconds) <= 15)
+                return id;
+        }
+        return first;
     }
 
     public List<RemoteArtist> searchArtists(String keyword) {
@@ -360,7 +487,6 @@ public class YtDlpApi {
             process = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.INHERIT).start();
             Process started = process;
             Thread caller = Thread.currentThread();
-            // Phải canh trong lúc đọc stdout; waitFor sau khi đọc không tự chống treo.
             timeout = new Thread(new Runnable() {
                 @Override
                 public void run() {

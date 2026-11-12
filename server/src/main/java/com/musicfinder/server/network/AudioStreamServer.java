@@ -16,9 +16,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class AudioStreamServer {
-    private static final long CACHE_TIME_MS = 24L * 60 * 60 * 1000; // 24 giờ không sử dụng
+    private static final long CACHE_TIME_MS = 24L * 60 * 60 * 1000;
+    private static final long VIDEO_CACHE_TIME_MS = 6L * 60 * 60 * 1000;
     private final int port;
     private final File directory;
+    private final File videoDirectory = new File(System.getProperty("music.video.directory", "storage/video"));
     private final Map<HttpExchange, File> activeFiles = new HashMap<>();
     private HttpServer server;
     private ScheduledExecutorService pool;
@@ -34,24 +36,34 @@ public class AudioStreamServer {
     }
 
     public static String getAudioUrl(String videoId) {
+        return baseUrl() + "/audio/" + videoId + ".mp3";
+    }
+
+    public static String getVideoUrl(String videoId) {
+        return baseUrl() + "/video/" + videoId + ".mp4";
+    }
+
+    private static String baseUrl() {
         int port = Integer.getInteger("music.audio.port", 8088);
         String base = System.getProperty("music.audio.baseUrl", "http://127.0.0.1:" + port);
         if (base.endsWith("/"))
             base = base.substring(0, base.length() - 1);
-        return base + "/audio/" + videoId + ".mp3";
+        return base;
     }
 
     public boolean start() {
         try {
             Files.createDirectories(directory.toPath());
+            Files.createDirectories(videoDirectory.toPath());
             server = HttpServer.create(new InetSocketAddress(port), 0);
             pool = Executors.newScheduledThreadPool(8);
             server.setExecutor(pool);
             server.createContext("/audio/", this::sendAudio);
-            deleteOldAudio();
-            pool.scheduleAtFixedRate(this::deleteOldAudio, 1, 1, TimeUnit.HOURS);
+            server.createContext("/video/", this::sendVideo);
+            cleanupOldFiles();
+            pool.scheduleAtFixedRate(this::cleanupOldFiles, 1, 1, TimeUnit.HOURS);
             server.start();
-            System.out.println("HTTP audio đang lắng nghe tại cổng " + server.getAddress().getPort());
+            System.out.println("HTTP audio/video đang lắng nghe tại cổng " + server.getAddress().getPort());
             return true;
         } catch (IOException e) {
             System.out.println("Không mở được HTTP audio: " + e.getMessage());
@@ -65,6 +77,14 @@ public class AudioStreamServer {
     }
 
     private void sendAudio(HttpExchange exchange) {
+        sendFile(exchange, "/audio/", directory, "[A-Za-z0-9_-]{11}\\.mp3", "audio/mpeg");
+    }
+
+    private void sendVideo(HttpExchange exchange) {
+        sendFile(exchange, "/video/", videoDirectory, "[A-Za-z0-9_-]{11}\\.mp4", "video/mp4");
+    }
+
+    private void sendFile(HttpExchange exchange, String prefix, File dir, String nameRegex, String contentType) {
         try {
             String method = exchange.getRequestMethod();
             if (!method.equals("GET") && !method.equals("HEAD")) {
@@ -72,13 +92,12 @@ public class AudioStreamServer {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
-            String name = exchange.getRequestURI().getPath().substring("/audio/".length());
-            // Chỉ nhận videoId.mp3; không nhận đường dẫn đến file khác trên máy.
-            if (!name.matches("[A-Za-z0-9_-]{11}\\.mp3")) {
+            String name = exchange.getRequestURI().getPath().substring(prefix.length());
+            if (!name.matches(nameRegex)) {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }
-            File file = new File(directory, name);
+            File file = new File(dir, name);
             synchronized (activeFiles) {
                 activeFiles.put(exchange, file);
                 if (file.isFile() && !Files.isSymbolicLink(file.toPath()))
@@ -119,7 +138,7 @@ public class AudioStreamServer {
                     }
                 }
                 long length = end - start + 1;
-                exchange.getResponseHeaders().set("Content-Type", "audio/mpeg");
+                exchange.getResponseHeaders().set("Content-Type", contentType);
                 exchange.getResponseHeaders().set("Accept-Ranges", "bytes");
                 exchange.getResponseHeaders().set("Content-Length", String.valueOf(length));
                 if (status == 206)
@@ -142,7 +161,7 @@ public class AudioStreamServer {
                 }
             }
         } catch (IOException e) {
-            System.out.println("Ngắt gửi audio: " + e.getMessage());
+            System.out.println("Ngắt gửi file: " + e.getMessage());
         } finally {
             exchange.close();
             synchronized (activeFiles) {
@@ -169,6 +188,38 @@ public class AudioStreamServer {
                     }
                 }
             }
+        }
+    }
+
+    void deleteOldVideo() {
+        synchronized (activeFiles) {
+            File[] files = videoDirectory.listFiles();
+            if (files == null)
+                return;
+            long now = System.currentTimeMillis();
+            for (File file : files) {
+                if (file.isFile() && file.getName().matches("[A-Za-z0-9_-]{11}\\.mp4")
+                        && !Files.isSymbolicLink(file.toPath()) && !activeFiles.containsValue(file)
+                        && now - file.lastModified() >= VIDEO_CACHE_TIME_MS) {
+                    if (file.delete())
+                        System.out.println("Đã xóa MP4 hết hạn: " + file.getName());
+                    else
+                        System.out.println("Chưa xóa được MP4 hết hạn: " + file.getName());
+                }
+            }
+        }
+    }
+
+    private void cleanupOldFiles() {
+        try {
+            deleteOldAudio();
+        } catch (RuntimeException e) {
+            System.out.println("Lỗi dọn audio: " + e.getMessage());
+        }
+        try {
+            deleteOldVideo();
+        } catch (RuntimeException e) {
+            System.out.println("Lỗi dọn video: " + e.getMessage());
         }
     }
 

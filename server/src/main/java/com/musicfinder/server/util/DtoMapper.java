@@ -74,4 +74,14 @@ public class DtoMapper {
                 type);
     }
 
+    public static KeywordStatisticData toKeywordStatisticData(SearchStatistics s) {
+        if (s == null) {
+            return null;
+        }
+        return new KeywordStatisticData(
+                s.getKeyword(),
+                s.getSearchType(),
+                s.getSearchCount() != null ? s.getSearchCount() : 0L);
+    }
+
 }

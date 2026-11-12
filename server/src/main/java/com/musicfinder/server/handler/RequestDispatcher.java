@@ -9,6 +9,7 @@ import com.musicfinder.server.service.CacheService;
 import com.musicfinder.shared.request.payload.SongPayload;
 import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.HistoryData;
+import com.musicfinder.shared.response.payload.KeywordStatisticData;
 import com.musicfinder.shared.response.payload.GetHistorysData;
 import com.musicfinder.shared.response.payload.SearchArtistData;
 import com.musicfinder.shared.response.Response;
@@ -16,6 +17,7 @@ import com.musicfinder.shared.response.payload.SearchSongData;
 import com.musicfinder.shared.response.payload.UserData;
 import com.musicfinder.shared.response.payload.ViewArtistDetailData;
 import com.musicfinder.shared.response.payload.ViewArtistSongsData;
+import com.musicfinder.shared.response.payload.VideoData;
 
 import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
@@ -23,6 +25,7 @@ import com.musicfinder.server.service.HistoryService;
 import com.musicfinder.server.service.PlayListService;
 import com.musicfinder.server.service.SearchService;
 import com.musicfinder.server.service.StatisticsService;
+import com.musicfinder.server.service.VideoService;
 import com.musicfinder.shared.enums.Status;
 
 import com.musicfinder.shared.request.Request;
@@ -46,6 +49,9 @@ import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
  * VIEW_SONG_DETAIL {songID} -> data = SongData; đưa data.audio_url vào player HTTP.
  * SEARCH_ARTIST {keyword} -> data = {artists: ArtistData[], suggestions: ArtistData[]}.
  * VIEW_ARTIST_DETAIL {artistID} -> data.artist; VIEW_ARTIST_SONGS {artistID} -> data.songs.
+ * GET_VIDEO {songID | externalId} -> data = {state, play_url, message}.
+ *   state = READY (có play_url, đưa vào Media) hoặc PROCESSING (chờ 2 giây rồi gửi lại cùng request).
+ *   Lỗi (status != SUCCESS) -> dừng polling, hiện message. play_url không lưu lại, mỗi lần mở video hỏi lại server.
  * Giữ đúng tên trường songID, artistID, durations_seconds, audio_url; xử lý giá trị null.
  * TCP 12345 chỉ trả JSON; byte MP3 lấy từ link HTTP 8088. Gọi chi tiết trước mỗi lần phát.
  */
@@ -60,6 +66,7 @@ public class RequestDispatcher {
     private final AuthService authService = new AuthService();
     private final PlayListService playListService;
     private final SearchService searchService;
+    private final VideoService videoService;
     private final CacheService cacheService = new CacheService();
 
     public RequestDispatcher() {
@@ -70,6 +77,7 @@ public class RequestDispatcher {
         searchService = new SearchService(api, cacheService);
         artistService = new ArtistService(cacheService, api, searchService);
         playListService = new PlayListService(searchService);
+        videoService = new VideoService(searchService, api);
     }
 
     public Response handle(String json) {
@@ -134,6 +142,20 @@ public class RequestDispatcher {
                 case GET_TOP_ARTISTS:
                     return Response.success(request, statisticsService.getTopArtists(readLimit(request)));
 
+                case GET_TOP_KEYWORDS: {
+                    String type = null;
+                    int limit = 10;
+                    if (request.getData() != null && !request.getData().isNull()) {
+                        StatisticsPayload payload = request.dataAs(StatisticsPayload.class);
+                        if (payload != null) {
+                            type = payload.type();
+                            limit = payload.limit();
+                        }
+                    }
+                    List<KeywordStatisticData> data = statisticsService.getTopKeywords(type, limit);
+                    return Response.success(request, data);
+                }
+
                 // ===== Ca sĩ =====
                 case VIEW_ARTIST_DETAIL: {
                     ArtistPayload payload = request.dataAs(ArtistPayload.class);
@@ -196,6 +218,18 @@ public class RequestDispatcher {
                     SongPayload payload = request.dataAs(SongPayload.class);
                     SongData data = searchService.detail(payload.songID(), payload.externalId());
                     return Response.success(request, data);
+                }
+                case GET_VIDEO: {
+                    SongPayload payload = request.dataAs(SongPayload.class);
+                    long start = System.nanoTime();
+                    try {
+                        VideoData data = videoService.getVideo(payload.songID(), payload.externalId());
+                        return Response.success(request, data);
+                    } catch (IllegalStateException e) {
+                        return Response.error(request, Status.ERROR, e.getMessage());
+                    } finally {
+                        System.out.println("GET_VIDEO xử lý trong " + (System.nanoTime() - start) / 1_000_000 + " ms");
+                    }
                 }
                 case SUGGEST: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);

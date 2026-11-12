@@ -164,6 +164,32 @@ public class SongRepository {
         }
     }
 
+    public boolean updateComposer(Long songId, String composer) {
+        String sql = "UPDATE SONGS SET composer = ?, updated_at = CURRENT_TIMESTAMP WHERE song_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, composer);
+            ps.setLong(2, songId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new DataException("Không cập nhật được nhạc sĩ bài hát ID " + songId, e);
+        }
+    }
+
+    public boolean updateVideoUrl(Long songId, String videoUrl) {
+        String sql = "UPDATE SONGS SET video_url = ?, updated_at = CURRENT_TIMESTAMP "
+                + "WHERE song_id = ? AND (video_url IS NULL OR video_url <> ?)";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, videoUrl);
+            ps.setLong(2, songId);
+            ps.setString(3, videoUrl);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new DataException("Không cập nhật được link video bài hát ID " + songId, e);
+        }
+    }
+
     // Cập nhật thông tin bài hát
     public boolean update(Songs song) {
         String sql = "UPDATE SONGS SET external_id = ?, title = ?, normalized_title = ?, composer = ?, "
