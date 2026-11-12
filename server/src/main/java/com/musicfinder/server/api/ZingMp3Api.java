@@ -1,6 +1,7 @@
 package com.musicfinder.server.api;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,9 @@ public class ZingMp3Api {
             java.time.LocalDate birthDate,
             String hometown,
             List<YtDlpApi.RemoteSong> songs) {
+    }
+
+    public record ZingLyric(String text, boolean reliable) {
     }
 
     private static final String BASE_URL = System.getProperty("music.zing.baseUrl",
@@ -78,6 +82,107 @@ public class ZingMp3Api {
         }
     }
 
+    public ZingLyric getLyric(String encodeId) {
+        if (encodeId == null || !encodeId.matches("[A-Za-z0-9]{6,20}"))
+            return null;
+        try {
+            String body = Jsoup.connect(BASE_URL + "/api/lyric")
+                    .data("id", encodeId)
+                    .ignoreContentType(true)
+                    .timeout(TIMEOUT_MS)
+                    .execute()
+                    .body();
+
+            ZingLyric result = parseLyric(body);
+            if (result.text() != null || !result.reliable())
+                return result;
+
+            String lrcUrl = lrcUrl(body);
+            if (lrcUrl == null)
+                return result;
+            String text = downloadLrc(lrcUrl);
+            return new ZingLyric(text.isEmpty() ? null : text, true);
+        } catch (IOException | JSONException e) {
+            System.out.println("Không lấy được lời từ Zing MP3: " + e.getMessage());
+            return null;
+        }
+    }
+
+    static String lrcUrl(String body) {
+        JSONObject data = new JSONObject(body).optJSONObject("data");
+        String file = data == null ? "" : data.optString("file", "");
+        return file.matches("https://([A-Za-z0-9-]+\\.)*zmdcdn\\.me/\\S*") ? file : null;
+    }
+
+    private static String downloadLrc(String url) throws IOException {
+        byte[] bytes = Jsoup.connect(url)
+                .ignoreContentType(true)
+                .timeout(TIMEOUT_MS)
+                .maxBodySize(1_000_000)
+                .execute()
+                .bodyAsBytes();
+        return lrcToText(new String(bytes, StandardCharsets.UTF_8));
+    }
+
+    static String lrcToText(String lrc) {
+        List<String> lines = new ArrayList<>();
+        for (String raw : lrc.replace("\uFEFF", "").split("\\R")) {
+            String line = raw.trim();
+            if (line.matches("^\\[[A-Za-z]+:.*\\]$"))
+                continue; // thẻ metadata, không phải lời
+            line = line.replaceAll("\\[\\d{1,3}:\\d{2}(?:[.:]\\d{1,3})?\\]", "")
+                    .replaceAll("<\\d{1,3}:\\d{2}(?:[.:]\\d{1,3})?>", "")
+                    .trim();
+            if (!line.isEmpty())
+                lines.add(line);
+        }
+        return String.join("\n", lines);
+    }
+
+    static ZingLyric parseLyric(String body) {
+        JSONObject root = new JSONObject(body);
+        if (root.optInt("err", -1) != 0)
+            return new ZingLyric(null, false);
+
+        JSONObject data = root.optJSONObject("data");
+        JSONArray sentences = data == null ? null : data.optJSONArray("sentences");
+        if (sentences == null)
+            return new ZingLyric(null, true);
+
+        List<String> lines = new ArrayList<>();
+        for (int i = 0; i < sentences.length(); i++) {
+            String line = sentenceText(sentences.opt(i));
+            if (!line.isEmpty())
+                lines.add(line);
+        }
+        return new ZingLyric(lines.isEmpty() ? null : String.join("\n", lines), true);
+    }
+
+    private static String sentenceText(Object item) {
+        if (item instanceof String str)
+            return str.trim();
+        if (!(item instanceof JSONObject obj))
+            return "";
+
+        JSONArray words = obj.optJSONArray("words");
+        if (words != null) {
+            List<String> parts = new ArrayList<>();
+            for (int i = 0; i < words.length(); i++) {
+                Object w = words.opt(i);
+                String text = w instanceof JSONObject wo ? wo.optString("data", "") : String.valueOf(w);
+                if (!text.isBlank())
+                    parts.add(text.trim());
+            }
+            return String.join(" ", parts);
+        }
+        for (String key : new String[] { "data", "text", "content" }) {
+            String text = obj.optString(key, "").trim();
+            if (!text.isEmpty())
+                return text;
+        }
+        return "";
+    }
+
     public List<YtDlpApi.RemoteSong> searchSongs(String keyword) {
         List<YtDlpApi.RemoteSong> result = new ArrayList<>();
         if (keyword == null || keyword.isBlank())
@@ -106,7 +211,6 @@ public class ZingMp3Api {
                     result.add(song);
             }
         } catch (IOException e) {
-            // Gồm timeout, mất mạng, HTTP lỗi (404, 500...)
             System.out.println("Không gọi được Zing MP3: " + e.getMessage());
         } catch (JSONException e) {
             System.out.println("Zing MP3 trả JSON không hợp lệ: " + e.getMessage());

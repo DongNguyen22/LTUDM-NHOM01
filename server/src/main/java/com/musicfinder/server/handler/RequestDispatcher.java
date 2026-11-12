@@ -7,6 +7,8 @@ import com.musicfinder.server.api.GoogleSuggestApi;
 import com.musicfinder.server.api.YtDlpApi;
 import com.musicfinder.server.service.CacheService;
 import com.musicfinder.shared.request.payload.SongPayload;
+import com.musicfinder.shared.response.payload.LyricData;
+import com.musicfinder.server.service.LyricService;
 import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.HistoryData;
 import com.musicfinder.shared.response.payload.KeywordStatisticData;
@@ -53,6 +55,8 @@ import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
  * GET_VIDEO {songID | externalId} -> data = {state, play_url, message}.
  *   state = READY (có play_url, đưa vào Media) hoặc PROCESSING (chờ 2 giây rồi gửi lại cùng request).
  *   Lỗi (status != SUCCESS) -> dừng polling, hiện message. play_url không lưu lại, mỗi lần mở video hỏi lại server.
+ * GET_LYRIC {songID | externalId} -> data = {hasLyric, text, source}; text = lời thuần, mỗi câu 1 dòng.
+ *   Bài chưa có lời -> status NOT_FOUND (đọc message). Zing lỗi -> ERROR. Nên gọi ở thread nền.
  * Giữ đúng tên trường songID, artistID, durations_seconds, audio_url; xử lý giá trị null.
  * TCP 12345 chỉ trả JSON; byte MP3 lấy từ link HTTP 8088. Gọi chi tiết trước mỗi lần phát.
  */
@@ -68,6 +72,7 @@ public class RequestDispatcher {
     private final PlayListService playListService;
     private final SearchService searchService;
     private final VideoService videoService;
+    private final LyricService lyricService;
     private final CacheService cacheService = new CacheService();
 
     public RequestDispatcher() {
@@ -79,6 +84,7 @@ public class RequestDispatcher {
         artistService = new ArtistService(cacheService, api, searchService);
         playListService = new PlayListService(searchService);
         videoService = new VideoService(searchService, api);
+        lyricService = new LyricService(searchService, cacheService);
     }
 
     public Response handle(String json) {
@@ -231,6 +237,18 @@ public class RequestDispatcher {
                         return Response.error(request, Status.ERROR, e.getMessage());
                     } finally {
                         System.out.println("GET_VIDEO xử lý trong " + (System.nanoTime() - start) / 1_000_000 + " ms");
+                    }
+                }
+                case GET_LYRIC: {
+                    SongPayload payload = request.dataAs(SongPayload.class);
+                    try {
+                        LyricData data = lyricService.getLyric(payload.songID(), payload.externalId());
+                        if (!data.hasLyric()) {
+                            return Response.error(request, Status.NOT_FOUND, "Bài hát này chưa có lời");
+                        }
+                        return Response.success(request, data);
+                    } catch (IllegalStateException e) {
+                        return Response.error(request, Status.ERROR, e.getMessage());
                     }
                 }
                 case SUGGEST: {
