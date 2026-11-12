@@ -420,3 +420,17 @@
     -fx-text-fill: #a4a7b0;
     -fx-font-size: 12px;
 }
+/* ===== Volume ===== */
+.volume-box { -fx-padding: 0 24 0 0; }
+.volume-slider .track {
+    -fx-background-color: #46404d;
+    -fx-background-radius: 4;
+    -fx-pref-height: 4;
+    -fx-padding: 2;
+}
+.volume-slider .thumb {
+    -fx-background-color: #c99eff;
+    -fx-background-radius: 8;
+    -fx-padding: 6;
+}
+.volume-slider .thumb:hover { -fx-background-color: #e0c4ff; }

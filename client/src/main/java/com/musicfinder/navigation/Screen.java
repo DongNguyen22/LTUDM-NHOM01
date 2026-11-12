@@ -7,6 +7,7 @@ public enum Screen {
     HOME("/com/musicfinder/home-content.fxml", "Music Finder - Home", "Discover", 1100, 720),
     SEARCH("/com/musicfinder/search-content.fxml", "Music Finder - Search", "Search", 1100, 720),
     ARTISTS("/com/musicfinder/artists-content.fxml", "Music Finder - Artists", "Artists", 1100, 720),
+    ARTIST_DETAIL("/com/musicfinder/artist-detail-content.fxml", "Music Finder - Artist", "Artist Profile", 1100, 720),
     PLAYLISTS("/com/musicfinder/my-playlists-content.fxml", "Music Finder - My Playlists", "My Playlists", 1100, 720),
     FAVORITES("/com/musicfinder/favorites-content.fxml", "Music Finder - Favorites", "Favorites", 1100, 720),
     SEARCH_HISTORY("/com/musicfinder/search-history-content.fxml", "Music Finder - Search History", "Search History",

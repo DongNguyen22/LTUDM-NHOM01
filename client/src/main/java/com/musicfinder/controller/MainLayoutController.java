@@ -16,6 +16,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.shape.SVGPath;
 
 import java.io.IOException;
 import java.util.EnumMap;
@@ -97,6 +98,23 @@ public class MainLayoutController implements PlayerListener {
 
     private boolean userSeeking = false;
 
+    // Âm lượng
+    private static final String ICON_VOLUME_HIGH = "M11 5L6 9H2v6h4l5 4V5z M15.5 8.5a5 5 0 0 1 0 7 M19 5a10 10 0 0 1 0 14";
+    private static final String ICON_VOLUME_LOW = "M11 5L6 9H2v6h4l5 4V5z M15.5 8.5a5 5 0 0 1 0 7";
+    private static final String ICON_VOLUME_MUTED = "M11 5L6 9H2v6h4l5 4V5z M23 9l-6 6 M17 9l6 6";
+
+    @FXML
+    private Button muteButton;
+
+    @FXML
+    private SVGPath volumeIcon;
+
+    @FXML
+    private Slider volumeSlider;
+
+    @FXML
+    private Label volumeLabel;
+
     @FXML
     private StackPane loadingOverlay;
 
@@ -126,6 +144,56 @@ public class MainLayoutController implements PlayerListener {
             PlayerManager.getInstance()
                     .seek(progressSlider.getValue());
         });
+
+        setupVolume();
+    }
+
+    // ===================== Âm lượng =====================
+
+    private void setupVolume() {
+        PlayerManager player = PlayerManager.getInstance();
+        volumeSlider.setValue(player.getVolume() * 100);
+        updateVolumeUi();
+        // .track chỉ tồn tại sau khi Slider có skin -> tô màu lại lúc đó
+        volumeSlider.skinProperty().addListener((obs, oldSkin, newSkin) -> Platform.runLater(this::updateVolumeUi));
+
+        // Kéo thanh -> đổi âm lượng ngay
+        volumeSlider.valueProperty().addListener((obs, oldV, newV) -> {
+            player.setVolume(newV.doubleValue() / 100.0);
+            updateVolumeUi();
+        });
+
+        // Lăn chuột trên thanh để tăng/giảm 5%
+        volumeSlider.setOnScroll(e -> {
+            double step = e.getDeltaY() > 0 ? 5 : -5;
+            volumeSlider.setValue(Math.max(0, Math.min(100, volumeSlider.getValue() + step)));
+        });
+    }
+
+    @FXML
+    private void handleToggleMute() {
+        PlayerManager.getInstance().toggleMute();
+        updateVolumeUi();
+    }
+
+    private void updateVolumeUi() {
+        PlayerManager player = PlayerManager.getInstance();
+        int percent = (int) Math.round(player.getVolume() * 100);
+        boolean silent = player.isMuted() || percent == 0;
+
+        volumeLabel.setText(player.isMuted() ? "Muted" : percent + "%");
+        if (silent) {
+            volumeIcon.setContent(ICON_VOLUME_MUTED);
+        } else if (percent < 50) {
+            volumeIcon.setContent(ICON_VOLUME_LOW);
+        } else {
+            volumeIcon.setContent(ICON_VOLUME_HIGH);
+        }
+
+        // Tô phần đã kéo của thanh bằng màu tím
+        double fill = player.isMuted() ? 0 : percent;
+        volumeSlider.lookupAll(".track").forEach(track -> track.setStyle(
+                "-fx-background-color: linear-gradient(to right, #c99eff " + fill + "%, #46404d " + fill + "%);"));
     }
 
     public void show(Screen screen) throws IOException {
