@@ -1,0 +1,109 @@
+/* ===== Artist detail ===== */
+.root { -fx-font-family: "Segoe UI", "Arial"; }
+
+.content-scroll,
+.content-scroll > .viewport { -fx-background-color: #111015; }
+.content-scroll { -fx-background-insets: 0; -fx-padding: 0; }
+.content-scroll .scroll-bar:vertical { -fx-pref-width: 7; }
+.content-scroll .scroll-bar:vertical .thumb { -fx-background-color: #4b4655; -fx-background-radius: 10; }
+.content-scroll .scroll-bar:vertical .track { -fx-background-color: #131118; }
+.content-scroll .increment-button,
+.content-scroll .decrement-button { -fx-opacity: 0; -fx-pref-height: 0; }
+.page-content { -fx-background-color: #111015; }
+
+/* Back link */
+.back-link {
+    -fx-background-color: transparent;
+    -fx-padding: 4 0 4 0;
+    -fx-text-fill: #c4b5fd;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+}
+.back-link:hover { -fx-text-fill: #ffffff; }
+.back-svg {
+    -fx-fill: transparent; -fx-stroke: #c4b5fd; -fx-stroke-width: 2.4;
+    -fx-stroke-line-cap: round; -fx-stroke-line-join: round;
+}
+.back-link:hover .back-svg { -fx-stroke: #ffffff; }
+
+.eyebrow { -fx-text-fill: #a98bff; -fx-font-size: 10px; -fx-font-weight: 800; }
+
+/* Hero */
+.artist-hero {
+    -fx-background-color: linear-gradient(to right, #3d2452 0%, #4a2d60 45%, #2c2236 100%);
+    -fx-background-radius: 14;
+    -fx-border-color: #4a3560;
+    -fx-border-radius: 14;
+}
+.hero-overlay {
+    -fx-background-color: linear-gradient(to right, rgba(61,36,82,0.95) 0%, rgba(61,36,82,0.55) 45%, rgba(40,30,50,0.2) 100%);
+    -fx-background-radius: 14;
+}
+.hero-photo-box {
+    -fx-background-color: #2a2034;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 18, 0.2, 0, 6);
+}
+.hero-name { -fx-text-fill: #ffffff; -fx-font-size: 34px; -fx-font-weight: 400; }
+.hero-meta { -fx-text-fill: #d6c8e6; -fx-font-size: 12px; }
+
+.primary-button {
+    -fx-background-color: linear-gradient(to right, #b18cff, #c4a2ff);
+    -fx-background-radius: 8;
+    -fx-text-fill: #1d1128;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 10 18 10 16;
+    -fx-cursor: hand;
+}
+.primary-button:hover { -fx-opacity: 0.92; }
+.primary-button:disabled { -fx-opacity: 0.5; }
+.play-btn-svg { -fx-fill: #1d1128; -fx-stroke: transparent; }
+
+.detail-message { -fx-text-fill: #b78cff; -fx-font-size: 11px; }
+
+/* Panels */
+.panel-card {
+    -fx-background-color: #1c1b22;
+    -fx-border-color: #2a2831;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-padding: 22 20 22 20;
+}
+.panel-title { -fx-text-fill: #ffffff; -fx-font-size: 18px; -fx-font-weight: 800; }
+
+/* About */
+.about-title { -fx-text-fill: #ffffff; -fx-font-size: 18px; -fx-font-weight: 400; }
+.about-bio { -fx-text-fill: #a59fb0; -fx-font-size: 12px; -fx-line-spacing: 3; }
+.info-key { -fx-text-fill: #8a8396; -fx-font-size: 10px; -fx-font-weight: 700; }
+.info-value { -fx-text-fill: #ffffff; -fx-font-size: 12px; -fx-font-weight: 700; }
+
+/* Popular songs */
+.song-list {
+    -fx-border-color: #2a2831;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+.song-row {
+    -fx-padding: 9 12 9 12;
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent transparent #2a2831 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cursor: hand;
+}
+.song-row:hover { -fx-background-color: #24222b; }
+.song-row-last { -fx-border-color: transparent; }
+.song-rank { -fx-text-fill: #8a8396; -fx-font-size: 11px; -fx-min-width: 22; }
+.song-title { -fx-text-fill: #ffffff; -fx-font-size: 12px; -fx-font-weight: 700; }
+.song-artist { -fx-text-fill: #8a8396; -fx-font-size: 10px; }
+.song-count { -fx-text-fill: #8a8396; -fx-font-size: 10px; -fx-min-width: 80; -fx-alignment: center-right; }
+.song-play {
+    -fx-background-color: transparent;
+    -fx-padding: 4 6 4 6;
+    -fx-cursor: hand;
+}
+.song-play-svg { -fx-fill: #8a8396; -fx-stroke: transparent; }
+.song-play:hover .song-play-svg { -fx-fill: #c4a2ff; }
+.song-empty { -fx-text-fill: #8a8396; -fx-font-size: 11px; -fx-padding: 14; }

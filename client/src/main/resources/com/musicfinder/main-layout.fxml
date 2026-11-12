@@ -254,7 +254,18 @@
 
                     <!-- giữ player nằm chính giữa -->
 
-                    <Region prefWidth="320" minWidth="260"/>
+                    <!-- ================= VOLUME ================= -->
+                    <HBox alignment="CENTER_RIGHT" spacing="10" prefWidth="320" minWidth="260" styleClass="volume-box">
+                        <Button fx:id="muteButton" onAction="#handleToggleMute" styleClass="player-control-btn">
+                            <graphic>
+                                <Group scaleX="0.72" scaleY="0.72">
+                                    <SVGPath fx:id="volumeIcon" content="M11 5L6 9H2v6h4l5 4V5z M15.5 8.5a5 5 0 0 1 0 7 M19 5a10 10 0 0 1 0 14" styleClass="player-control-icon"/>
+                                </Group>
+                            </graphic>
+                        </Button>
+                        <Slider fx:id="volumeSlider" min="0" max="100" value="72" prefWidth="110" styleClass="volume-slider"/>
+                        <Label fx:id="volumeLabel" text="72%" minWidth="36" styleClass="player-time-label"/>
+                    </HBox>
 
                 </HBox>
 

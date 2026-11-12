@@ -47,7 +47,16 @@
                 <VBox fx:id="videoPane" visible="false" managed="false" spacing="16" styleClass="detail-card">
                     <Label text="XEM VIDEO" styleClass="detail-eyebrow"/>
                     <Label text="Music video" styleClass="card-title"/>
-                    <Label text="Chức năng xem video sẽ được bổ sung sau." wrapText="true" styleClass="detail-muted"/>
+                    <!-- Khung video 16:9; MediaView được controller thêm vào -->
+                    <StackPane fx:id="videoContainer" styleClass="video-container" minHeight="200" prefHeight="360">
+                        <Label fx:id="videoStatusLabel" text="Chọn tab để tải video" wrapText="true" styleClass="video-status"/>
+                    </StackPane>
+                    <HBox fx:id="videoControls" spacing="12" alignment="CENTER_LEFT" styleClass="video-controls" disable="true">
+                        <Button fx:id="videoPlayButton" text="▶" onAction="#handleVideoPlayPause" styleClass="video-play-button"/>
+                        <Label fx:id="videoCurrentTime" text="0:00" styleClass="video-time"/>
+                        <Slider fx:id="videoSlider" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="video-slider"/>
+                        <Label fx:id="videoTotalTime" text="0:00" styleClass="video-time"/>
+                    </HBox>
                 </VBox>
             </StackPane>
             <Label fx:id="statusLabel" wrapText="true" styleClass="detail-muted"/>

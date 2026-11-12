@@ -13,6 +13,7 @@ import javafx.scene.media.MediaPlayer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 public class PlayerManager {
     private static PlayerManager instance;
@@ -22,6 +23,15 @@ public class PlayerManager {
     private SongData currentSong;
     private Boolean isPlaying = false;
     private PlayerListener listener;
+    // Gọi ngay trước khi nhạc bắt đầu phát (vd: để dừng video đang xem ở Song detail)
+    private Runnable onAudioStart;
+
+    // Âm lượng 0.0 - 1.0, giữ nguyên khi đổi bài và được nhớ giữa các lần mở app
+    private static final String PREF_VOLUME = "player.volume";
+    private static final String PREF_MUTED = "player.muted";
+    private final Preferences prefs = Preferences.userNodeForPackage(PlayerManager.class);
+    private double volume = clampVolume(prefs.getDouble(PREF_VOLUME, 0.72));
+    private boolean muted = prefs.getBoolean(PREF_MUTED, false);
 
     private PlayerManager() {
 
@@ -36,6 +46,63 @@ public class PlayerManager {
 
     public void setListener(PlayerListener listener) {
         this.listener = listener;
+    }
+
+    public void setOnAudioStart(Runnable onAudioStart) {
+        this.onAudioStart = onAudioStart;
+    }
+
+    // Chỉ gỡ nếu đúng hook của người gọi (tránh gỡ nhầm hook của màn hình khác)
+    public void clearOnAudioStart(Runnable onAudioStart) {
+        if (this.onAudioStart == onAudioStart) {
+            this.onAudioStart = null;
+        }
+    }
+
+    // ===================== Âm lượng =====================
+
+    public double getVolume() {
+        return volume;
+    }
+
+    public boolean isMuted() {
+        return muted;
+    }
+
+    public void setVolume(double value) {
+        volume = clampVolume(value);
+        if (volume > 0 && muted) {
+            muted = false; // kéo thanh âm lượng lên -> tự bỏ tắt tiếng
+        }
+        applyVolume();
+        savePrefs();
+    }
+
+    public void toggleMute() {
+        muted = !muted;
+        applyVolume();
+        savePrefs();
+    }
+
+    private void applyVolume() {
+        if (mediaPlayer != null) {
+            mediaPlayer.setVolume(muted ? 0 : volume);
+        }
+    }
+
+    private void savePrefs() {
+        prefs.putDouble(PREF_VOLUME, volume);
+        prefs.putBoolean(PREF_MUTED, muted);
+    }
+
+    private static double clampVolume(double value) {
+        return Double.isNaN(value) ? 0.72 : Math.max(0, Math.min(1, value));
+    }
+
+    private void notifyAudioStart() {
+        if (onAudioStart != null) {
+            onAudioStart.run();
+        }
     }
 
     public void playSong(List<SongData> songs, SongData selectedSong) {
@@ -98,6 +165,7 @@ public class PlayerManager {
         try {
             Media media = new Media(audioUrl);
             mediaPlayer = new MediaPlayer(media);
+            applyVolume(); // bài mới dùng lại âm lượng hiện tại
             mediaPlayer.currentTimeProperty().addListener((observable, oldTime, newTime) -> {
 
                 if (listener == null) {
@@ -113,6 +181,7 @@ public class PlayerManager {
                 }
             });
             mediaPlayer.setOnReady(() -> {
+                notifyAudioStart();
                 mediaPlayer.play();
                 isPlaying = true;
                 if (listener != null) {
@@ -135,6 +204,18 @@ public class PlayerManager {
         }
     }
 
+    // Tạm dừng nhạc (vd: khi bắt đầu xem video) — không làm gì nếu đang không phát
+    public void pause() {
+        if (mediaPlayer == null || !isPlaying) {
+            return;
+        }
+        mediaPlayer.pause();
+        isPlaying = false;
+        if (listener != null) {
+            listener.onPlayingChanged(false);
+        }
+    }
+
     public void togglePlayPause() {
 
         if (mediaPlayer == null) {
@@ -149,6 +230,7 @@ public class PlayerManager {
 
         } else {
 
+            notifyAudioStart();
             mediaPlayer.play();
 
             isPlaying = true;

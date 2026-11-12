@@ -1,6 +1,7 @@
 package com.musicfinder.navigation;
 
 import com.musicfinder.MainApp;
+import com.musicfinder.controller.ArtistDetailController;
 import com.musicfinder.controller.ArtistsController;
 import com.musicfinder.controller.MainLayoutController;
 import com.musicfinder.controller.SearchController;
@@ -15,6 +16,7 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import com.musicfinder.controller.playlist_songController;
+import com.musicfinder.shared.response.payload.ArtistData;
 import com.musicfinder.shared.response.payload.PlayListData;
 import com.musicfinder.shared.response.payload.SongData;
 
@@ -26,6 +28,8 @@ public final class Navigator {
     private static Stage stage;
     private static Parent mainLayoutRoot;
     private static MainLayoutController mainLayoutController;
+    // Khung cửa sổ (thanh tiêu đề + nút đóng) bọc ngoài mọi màn hình
+    private static WindowFrame windowFrame;
 
     private Navigator() {
     }
@@ -59,7 +63,7 @@ public final class Navigator {
 
     private static void ensureMainLayout() throws IOException {
         if (mainLayoutRoot != null && mainLayoutController != null) {
-            if (stage.getScene() == null || stage.getScene().getRoot() != mainLayoutRoot) {
+            if (stage.getScene() == null || windowFrame == null || windowFrame.getContent() != mainLayoutRoot) {
                 setSceneRoot(mainLayoutRoot);
             }
             return;
@@ -74,12 +78,16 @@ public final class Navigator {
     }
 
     private static void setSceneRoot(Parent root) {
-        Scene scene = stage.getScene();
+        if (windowFrame == null) {
+            windowFrame = new WindowFrame(stage);
+        }
+        windowFrame.setContent(root);
 
+        Scene scene = stage.getScene();
         if (scene == null) {
-            stage.setScene(new Scene(root, DEFAULT_WIDTH, DEFAULT_HEIGHT));
-        } else {
-            scene.setRoot(root);
+            stage.setScene(new Scene(windowFrame, DEFAULT_WIDTH, DEFAULT_HEIGHT));
+        } else if (scene.getRoot() != windowFrame) {
+            scene.setRoot(windowFrame);
         }
     }
 
@@ -165,6 +173,27 @@ public final class Navigator {
 
             alert.setTitle("Lỗi");
             alert.setHeaderText("Không thể mở Detail Songs");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        }
+    }
+
+    public static void openArtistDetail(ArtistData artist) {
+        try {
+            ensureInitialized();
+            ensureMainLayout();
+
+            mainLayoutController.show(Screen.ARTIST_DETAIL, controller -> {
+                if (controller instanceof ArtistDetailController artistDetail) {
+                    artistDetail.init(artist);
+                }
+            });
+
+            applyWindowSettings(Screen.ARTIST_DETAIL);
+        } catch (IOException | RuntimeException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Lỗi");
+            alert.setHeaderText("Không thể mở trang ca sĩ");
             alert.setContentText(e.getMessage());
             alert.showAndWait();
         }

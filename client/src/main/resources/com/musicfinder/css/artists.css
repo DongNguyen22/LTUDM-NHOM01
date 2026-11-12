@@ -275,3 +275,42 @@
 .nav-button.bottom-nav:hover { -fx-background-color: #1b1821; -fx-text-fill: #ffffff; }
 .nav-button.bottom-nav:focused { -fx-background-color: transparent; -fx-background-insets: 0; }
 .nav-button.bottom-nav:hover:focused { -fx-background-color: #1b1821; }
+
+/* ===== Artists — theo bản thiết kế ===== */
+.page-content { -fx-background-color: #111015; }
+.content-scroll, .content-scroll > .viewport { -fx-background-color: #111015; }
+.eyebrow { -fx-text-fill: #a98bff; -fx-font-weight: 800; }
+.page-title { -fx-text-fill: #ffffff; -fx-font-size: 30px; -fx-font-weight: 400; }
+.page-subtitle { -fx-text-fill: #8f8cf2; }
+
+.artist-search-box {
+    -fx-background-color: #1c1b22;
+    -fx-border-color: #2a2831;
+    -fx-padding: 6 6 6 16;
+}
+.artist-search-input { -fx-prompt-text-fill: #8a8396; }
+.primary-button {
+    -fx-background-color: linear-gradient(to right, #b18cff, #c4a2ff);
+    -fx-text-fill: #1d1128;
+    -fx-font-weight: 700;
+}
+.button-arrow-svg {
+    -fx-fill: transparent; -fx-stroke: #1d1128; -fx-stroke-width: 2.4;
+    -fx-stroke-line-cap: round; -fx-stroke-line-join: round;
+}
+
+.section-title { -fx-text-fill: #ffffff; -fx-font-size: 18px; -fx-font-weight: 800; }
+.section-subtitle { -fx-text-fill: #8a8396; }
+
+.artist-card {
+    -fx-background-color: #1c1b22;
+    -fx-border-color: #2a2831;
+    -fx-border-width: 1;
+    -fx-padding: 14 18 14 14;
+}
+.artist-card:hover { -fx-background-color: #201e27; -fx-border-color: #3a3246; }
+.card-eyebrow { -fx-text-fill: #a98bff; -fx-font-size: 10px; -fx-font-weight: 800; }
+.artist-name { -fx-text-fill: #ffffff; -fx-font-size: 22px; -fx-font-weight: 400; }
+.artist-location { -fx-text-fill: #e58fb6; -fx-font-size: 11px; }
+.artist-description { -fx-text-fill: #8a8396; -fx-font-size: 11px; -fx-max-width: 700; }
+.small-button { -fx-font-size: 11px; -fx-padding: 9 14 9 14; }

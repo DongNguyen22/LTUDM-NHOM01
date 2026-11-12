@@ -198,3 +198,41 @@
 }
 .song-detail > .scroll-bar:vertical .increment-arrow,
 .song-detail > .scroll-bar:vertical .decrement-arrow { -fx-padding: 0; }
+
+/* ===== Video player ===== */
+.song-detail .video-container {
+    -fx-background-color: #0b0a0f;
+    -fx-background-radius: 12;
+    -fx-border-color: #ffffff10;
+    -fx-border-radius: 12;
+}
+.song-detail .video-status {
+    -fx-text-fill: #aaa3b9;
+    -fx-font-size: 12px;
+    -fx-text-alignment: center;
+    -fx-padding: 16;
+}
+.song-detail .video-controls { -fx-padding: 2 4 0 4; }
+.song-detail .video-play-button {
+    -fx-background-color: #d4b2ff;
+    -fx-background-radius: 20;
+    -fx-text-fill: #25182e;
+    -fx-font-size: 12px;
+    -fx-min-width: 36; -fx-min-height: 36;
+    -fx-max-width: 36; -fx-max-height: 36;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+.song-detail .video-play-button:hover { -fx-opacity: 0.9; }
+.song-detail .video-time { -fx-text-fill: #aaa3b9; -fx-font-size: 11px; -fx-min-width: 36; }
+.song-detail .video-slider .track {
+    -fx-background-color: #46404d;
+    -fx-background-radius: 4;
+    -fx-pref-height: 4;
+}
+.song-detail .video-slider .thumb {
+    -fx-background-color: #c99eff;
+    -fx-background-radius: 8;
+    -fx-pref-width: 12; -fx-pref-height: 12;
+    -fx-padding: 6;
+}
