@@ -257,12 +257,13 @@ public class YtDlpApi {
         Process process = null;
         try {
             System.out.println("Đang tải video MP4: " + videoId);
-            String format = "b[ext=mp4][vcodec^=avc1][height<=360]/18/"
-                    + "bv*[ext=mp4][vcodec^=avc1][height<=360]+ba[ext=m4a]";
+            // Giới hạn chất lượng bằng -S res (tính theo cạnh NGẮN của khung hình) thay vì [height<=N]:
+            // video dọc (Shorts) 720p có height=1280 nên [height<=360] chỉ còn lại bản 144p.
+            String format = "bv*[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4][vcodec^=avc1]";
             String[] command = { binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
                     "--force-overwrites", "--socket-timeout", "20", "--retries", "1",
                     "--extractor-retries", "1", "--ffmpeg-location", ffmpeg,
-                    "-f", format, "--merge-output-format", "mp4", "--max-filesize", "100M",
+                    "-f", format, "-S", "res:720", "--merge-output-format", "mp4", "--max-filesize", "100M",
                     "-o", new File(directory, videoId + ".download.%(ext)s").getAbsolutePath(),
                     "--", "https://www.youtube.com/watch?v=" + videoId };
             process = new ProcessBuilder(command).inheritIO().start();

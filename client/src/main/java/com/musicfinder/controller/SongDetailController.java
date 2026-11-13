@@ -236,7 +236,7 @@ public class SongDetailController {
             videoControls.setDisable(false);
             videoTotalTime.setText(formatTime(player.getTotalDuration()));
             PlayerManager.getInstance().pause(); // dừng nhạc nền khi xem video
-            player.play();
+            playWhenBuffered(player);
         });
         player.statusProperty().addListener((obs, oldS, newS) -> {
             if (player == videoPlayer) {
@@ -265,6 +265,35 @@ public class SongDetailController {
                         + (player.getError() == null ? "" : player.getError().getMessage()));
             }
         });
+    }
+
+    // Chờ đệm trước ~2s (hoặc tối đa 1.5s) rồi mới play, tránh giật ở vài giây đầu khi mở lần đầu
+    private void playWhenBuffered(MediaPlayer player) {
+        Duration total = player.getTotalDuration();
+        Duration target = Duration.seconds(2);
+        if (total != null && !total.isUnknown() && total.lessThan(target)) {
+            target = total;
+        }
+        Duration need = target;
+        if (!player.getBufferProgressTime().lessThan(need)) {
+            player.play();
+            return;
+        }
+        boolean[] started = { false };
+        Runnable start = () -> {
+            if (!started[0] && player == videoPlayer) {
+                started[0] = true;
+                player.play();
+            }
+        };
+        player.bufferProgressTimeProperty().addListener((obs, oldB, newB) -> {
+            if (newB != null && !newB.lessThan(need)) {
+                start.run();
+            }
+        });
+        PauseTransition fallback = new PauseTransition(Duration.millis(1500));
+        fallback.setOnFinished(e -> start.run());
+        fallback.play();
     }
 
     // Link lưu trong video_url có thể đã hết hạn / file bị xoá -> hỏi lại server một lần
