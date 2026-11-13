@@ -79,6 +79,11 @@
                 <configuration>
                     <!-- Change when your JavaFX Application class is created -->
                     <mainClass>com.musicfinder.MainApp</mainClass>
+                    <!-- Tắt cảnh báo của JDK 24+ khi JavaFX gọi native/Unsafe -->
+                    <options>
+                        <option>--enable-native-access=javafx.graphics,javafx.media</option>
+                        <option>--sun-misc-unsafe-memory-access=allow</option>
+                    </options>
                 </configuration>
             </plugin>
         </plugins>
