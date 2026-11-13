@@ -257,8 +257,10 @@ public class YtDlpApi {
         Process process = null;
         try {
             System.out.println("Đang tải video MP4: " + videoId);
-            // Giới hạn chất lượng bằng -S res (tính theo cạnh NGẮN của khung hình) thay vì [height<=N]:
-            // video dọc (Shorts) 720p có height=1280 nên [height<=360] chỉ còn lại bản 144p.
+            // Giới hạn chất lượng bằng -S res (tính theo cạnh NGẮN của khung hình) thay vì
+            // [height<=N]:
+            // video dọc (Shorts) 720p có height=1280 nên [height<=360] chỉ còn lại bản
+            // 144p.
             String format = "bv*[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4][vcodec^=avc1]";
             String[] command = { binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
                     "--force-overwrites", "--socket-timeout", "20", "--retries", "1",
@@ -361,21 +363,49 @@ public class YtDlpApi {
     public String findMatchingVideoId(String songTitle, String artistName, int durationSeconds) {
         if (songTitle == null || songTitle.isBlank())
             return null;
-        String query = songTitle.trim() + " " + (artistName == null ? "" : artistName.trim()) + " audio";
-        JSONObject result = execute(List.of("--flat-playlist", "--playlist-end", "3",
-                "--", "ytsearch3:" + query.trim()));
+
+        // 1. Tìm theo "Tên bài + Tên ca sĩ" chuẩn xác, không ghép chữ "audio" bừa bãi
+        String query = songTitle.trim() + (artistName != null && !artistName.isBlank() ? " " + artistName.trim() : "");
+
+        // Quét 6 video thay vì 3 để tránh bị các video quảng cáo/playlist che khuất
+        JSONObject result = execute(List.of("--flat-playlist", "--playlist-end", "6",
+                "--", "ytsearch6:" + query.trim()));
         if (result == null)
             return null;
-        String first = null;
+
+        String bestId = null;
+        int minDiff = Integer.MAX_VALUE;
+        String fallbackId = null;
+
         for (RemoteSong song : readSongs(result)) {
             String id = song.externalId().substring("youtube:video:".length());
-            if (first == null)
-                first = id;
-            if (durationSeconds > 0 && song.durationSeconds() > 0
-                    && Math.abs(song.durationSeconds() - durationSeconds) <= 15)
-                return id;
+            int ytDuration = song.durationSeconds();
+
+            // 2. Chặn video rác: Nếu bài hát gốc < 10 phút mà video YT > 10 phút hoặc gấp
+            // đôi -> BỎ QUA NGAY
+            if (durationSeconds > 0 && durationSeconds < 600 && ytDuration > Math.max(600, durationSeconds * 2)) {
+                continue;
+            }
+
+            if (fallbackId == null) {
+                fallbackId = id;
+            }
+
+            if (durationSeconds > 0 && ytDuration > 0) {
+                int diff = Math.abs(ytDuration - durationSeconds);
+                // Khớp chuẩn lệch <= 15s -> Lấy ngay
+                if (diff <= 15) {
+                    return id;
+                }
+                // Tìm video có thời lượng gần nhất (nhưng lệch không quá 60s)
+                if (diff < minDiff && diff <= 60) {
+                    minDiff = diff;
+                    bestId = id;
+                }
+            }
         }
-        return first;
+
+        return bestId != null ? bestId : fallbackId;
     }
 
     public List<RemoteArtist> searchArtists(String keyword) {
