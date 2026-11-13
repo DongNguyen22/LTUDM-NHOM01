@@ -500,7 +500,7 @@ public class YtDlpApi {
         int duration = (int) Math.max(0, Math.min(Integer.MAX_VALUE, json.optDouble("duration", 0)));
         return new SongData(null, json.optString("title", ""), composer, List.of(channel), duration,
                 audioUrl, url, json.optString("thumbnail", "https://i.ytimg.com/vi/" + videoId + "/hqdefault.jpg"), 0L,
-                null, "youtube:video:" + videoId);
+                null, "youtube:video:" + videoId, null);
     }
 
     private JSONObject execute(List<String> arguments) {

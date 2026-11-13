@@ -41,6 +41,7 @@ public class SearchService {
     private static final int LIST_CACHE_SECONDS = 3600; // 1 giờ
 
     private final Map<String, Object> locks = new ConcurrentHashMap<>();
+    private final Map<Long, Object> songLocks = new ConcurrentHashMap<>();
 
     public SearchService() {
         this(new YtDlpApi());
@@ -138,11 +139,11 @@ public class SearchService {
     private SongData remoteToSongData(YtDlpApi.RemoteSong remote) {
         return new SongData(null, remote.title(), null, List.of(remote.artist().name()),
                 remote.durationSeconds(), null, remote.storeUrl(), remote.thumbnailUrl(), 0L,
-                remote.previewUrl(), remote.externalId());
+                remote.previewUrl(), remote.externalId(),
+                remote.artist().externalId());
     }
 
     public SongData toResultSong(YtDlpApi.RemoteSong remote) {
-        cache.putValue(remote.externalId(), "SONG_META", remote, LIST_CACHE_SECONDS);
         return remoteToSongData(remote);
     }
 
@@ -204,11 +205,18 @@ public class SearchService {
         if (found.isPresent())
             return found.get().getSongId();
 
-        YtDlpApi.RemoteSong meta = cache.getValue(externalId, "SONG_META", YtDlpApi.RemoteSong.class);
-        if (meta == null || !externalId.equals(meta.externalId()))
+        SongData sd = cache.findSongByExternalId(externalId);
+        if (sd == null || sd.artistExternalId() == null
+                || sd.artistNames() == null || sd.artistNames().isEmpty())
             throw new IllegalArgumentException("Kết quả đã hết hạn, vui lòng tìm lại");
 
-        return importSong(meta).songID(); // importSong đã synchronized và kiểm tra trùng lại
+        YtDlpApi.RemoteSong meta = new YtDlpApi.RemoteSong(
+                sd.externalId(), sd.title(),
+                sd.durations_seconds() == null ? 0 : sd.durations_seconds(),
+                sd.preview_url(), sd.thumbnail_url(), sd.video_url(),
+                new YtDlpApi.RemoteArtist(sd.artistExternalId(), sd.artistNames().get(0)));
+
+        return importSong(meta).songID();
     }
 
     public SongData getSong(Long id) {
@@ -227,51 +235,44 @@ public class SearchService {
             throw new IllegalArgumentException("ID bài hát không hợp lệ");
 
         songRepo.updateSearchCount(id);
+        return prepareAudio(id);
+    }
 
-        SongData cached = cache.getValue(String.valueOf(id), "SONG_DETAIL", SongData.class);
-        if (cached != null && cached.audio_url() != null && !cached.audio_url().isBlank()) {
-            String cachedVideoId = youtubeId(cached);
-            File audioDir = new File(System.getProperty("music.audio.directory", "storage/audio"));
-            if (cachedVideoId != null && new File(audioDir, cachedVideoId + ".mp3").isFile()) {
-                return cached;
-            }
-        }
+    private SongData prepareAudio(Long id) {
+        synchronized (songLocks.computeIfAbsent(id, k -> new Object())) {
+            SongData song = getSong(id);
+            String videoId = resolveVideoId(song);
+            if (videoId == null)
+                throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
 
-        SongData song = getSong(id);
-        String videoId = resolveVideoId(song);
-        if (videoId == null)
-            throw new IllegalArgumentException("Bài hát chưa có nguồn YouTube");
+            File mp3 = new File(System.getProperty("music.audio.directory", "storage/audio"),
+                    videoId + ".mp3");
+            if (!mp3.isFile() && apiService.downloadAudioToCache(videoId) == null)
+                throw new IllegalStateException("Không chuẩn bị được MP3. Xem lỗi yt-dlp/FFmpeg tại server.");
 
-        if (apiService.downloadAudioToCache(videoId) == null)
-            throw new IllegalStateException("Không chuẩn bị được MP3. Xem lỗi yt-dlp/FFmpeg tại server.");
+            String audioUrl = AudioStreamServer.getAudioUrl(videoId);
+            if (!songRepo.updateAudioUrl(id, audioUrl))
+                throw new IllegalStateException("Không cập nhật được link audio vào DB");
 
-        String audioUrl = AudioStreamServer.getAudioUrl(videoId);
-        if (!songRepo.updateAudioUrl(id, audioUrl))
-            throw new IllegalStateException("Không cập nhật được link audio vào DB");
-
-        String composer = song.composerList();
-        if ((composer == null || composer.isBlank()) && song.externalId() != null
-                && song.externalId().startsWith("zing:song:")) {
-            String found = zingApi.getComposer(song.externalId().substring("zing:song:".length()));
-            if (found != null) {
-                try {
-                    songRepo.updateComposer(id, found);
-                    composer = found;
-                } catch (RuntimeException e) {
-                    System.out.println("Không lưu được nhạc sĩ: " + e.getMessage());
+            String composer = song.composerList();
+            if ((composer == null || composer.isBlank()) && song.externalId() != null
+                    && song.externalId().startsWith("zing:song:")) {
+                String found = zingApi.getComposer(song.externalId().substring("zing:song:".length()));
+                if (found != null) {
+                    try {
+                        songRepo.updateComposer(id, found);
+                        composer = found;
+                    } catch (RuntimeException e) {
+                        System.out.println("Không lưu được nhạc sĩ: " + e.getMessage());
+                    }
                 }
             }
+
+            return new SongData(song.songID(), song.title(), composer, song.artistNames(),
+                    song.durations_seconds(), audioUrl, song.video_url(), song.thumbnail_url(),
+                    song.searchCount(), song.preview_url(), song.externalId(),
+                    song.artistExternalId());
         }
-
-        SongData result = new SongData(song.songID(), song.title(), composer, song.artistNames(),
-                song.durations_seconds(), audioUrl, song.video_url(), song.thumbnail_url(),
-                song.searchCount(), song.preview_url(), song.externalId());
-
-        // LƯU BÀI HÁT ĐÃ PHÁT VÀO CACHE
-        cache.putValue(String.valueOf(id), "SONG_DETAIL", result, 900);
-
-        return result;
-
     }
 
     public static String youtubeId(SongData song) {
@@ -319,15 +320,7 @@ public class SearchService {
                 return;
             id = found.get().getSongId();
         }
-        if (!songRepo.updateVideoUrl(id, videoUrl))
-            return;
-        String key = String.valueOf(id);
-        SongData cached = cache.getValue(key, "SONG_DETAIL", SongData.class);
-        if (cached != null) {
-            cache.putValue(key, "SONG_DETAIL", new SongData(cached.songID(), cached.title(), cached.composerList(),
-                    cached.artistNames(), cached.durations_seconds(), cached.audio_url(), videoUrl,
-                    cached.thumbnail_url(), cached.searchCount(), cached.preview_url(), cached.externalId()), 900);
-        }
+        songRepo.updateVideoUrl(id, videoUrl);
     }
 
     // =====================UTIL========================
@@ -340,9 +333,7 @@ public class SearchService {
         // dùng
         CompletableFuture.runAsync(() -> {
             try {
-                // Tận dụng luôn hàm detail() đã có sẵn logic kiểm tra file, tải MP3 và lưu
-                // cache
-                detail(songId, null);
+                prepareAudio(songId);
                 log.info("Đã chuẩn bị xong MP3 cho bài hát ID: {}", songId);
             } catch (Exception e) {
                 // Nếu lỗi mạng, yt-dlp lỗi hay video bản quyền: chỉ log cảnh báo, không làm

@@ -25,7 +25,8 @@ public class DtoMapper {
                 s.getThumbnailUrl(),
                 s.getSearchCount(),
                 s.getPreviewUrl(),
-                s.getExternalId());
+                s.getExternalId(),
+                null);
     }
 
     public static ArtistData toArtistData(Artists a) {

@@ -61,6 +61,27 @@ public class SearchCacheRepository {
         }
     }
 
+    public Optional<String> findJsonContainingSong(String externalId) {
+        String sql = "SELECT response_json::text FROM SEARCH_CACHE "
+                + "WHERE search_type IN ('SONG', 'ARTIST_SONGS') "
+                + "AND response_json @> jsonb_build_object('songs', "
+                + "jsonb_build_array(jsonb_build_object('externalId', ?::text))) "
+                + "ORDER BY expires_at DESC LIMIT 1";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, externalId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(rs.getString(1));
+                }
+            }
+            return Optional.empty();
+        } catch (SQLException e) {
+            log.error("Lỗi tìm bài trong search cache [{}]: {}", externalId, e.getMessage(), e);
+            throw new DataException("Lỗi tìm bài hát trong search cache " + externalId, e);
+        }
+    }
+
     public SearchCache save(SearchCache cache) {
         String sql = "INSERT INTO SEARCH_CACHE (cache_key, keyword, normalized_keyword, search_type, response_json, expires_at) "
                 + "VALUES (?, ?, ?, ?, ?::jsonb, ?) "

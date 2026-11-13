@@ -1,5 +1,7 @@
 package com.musicfinder.server.service;
 
+import java.util.regex.Pattern;
+
 import com.musicfinder.server.api.ZingMp3Api;
 import com.musicfinder.shared.response.payload.LyricData;
 import com.musicfinder.shared.response.payload.SongData;
@@ -12,6 +14,7 @@ public class LyricService {
     private final SearchService searchService;
     private final CacheService cache;
     private final ZingMp3Api zingApi;
+    private static final Pattern TIMESTAMP = Pattern.compile("\\[\\d{1,2}:\\d{2}(?:[.:]\\d{1,3})?]");
 
     public LyricService(SearchService searchService, CacheService cache) {
         this(searchService, cache, new ZingMp3Api());
@@ -33,7 +36,7 @@ public class LyricService {
         }
 
         if (!ext.startsWith(ZING_PREFIX)) {
-            return new LyricData(false, null, null);
+            return new LyricData(false, null, false);
         }
         String encodeId = ext.substring(ZING_PREFIX.length());
         if (!encodeId.matches("[A-Za-z0-9]{6,20}")) {
@@ -55,11 +58,15 @@ public class LyricService {
         }
 
         LyricData result = zing.text() == null
-                ? new LyricData(false, null, null)
-                : new LyricData(true, zing.text(), "zing");
+                ? new LyricData(false, null, false)
+                : new LyricData(true, zing.text(), hasTimestamps(zing.text()));
         if (zing.reliable()) {
             cache.putValue(encodeId, CACHE_TYPE, result, result.hasLyric() ? HAS_LYRIC_SECONDS : NO_LYRIC_SECONDS);
         }
         return result;
+    }
+
+    static boolean hasTimestamps(String text) {
+        return text != null && TIMESTAMP.matcher(text).find();
     }
 }

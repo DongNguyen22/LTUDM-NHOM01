@@ -158,4 +158,26 @@ public class CacheService {
             System.out.println("Không lưu được cache: " + e.getMessage());
         }
     }
+
+    public SongData findSongByExternalId(String externalId) {
+        try {
+            Optional<String> json = cacheRepo.findJsonContainingSong(externalId);
+            if (json.isEmpty()) {
+                return null;
+            }
+            SearchSongData data = Json.fromJson(json.get(), SearchSongData.class);
+            if (data == null || data.songs() == null) {
+                return null;
+            }
+            for (SongData song : data.songs()) {
+                if (song != null && externalId.equals(song.externalId())) {
+                    return song;
+                }
+            }
+            return null;
+        } catch (DataException | IllegalArgumentException e) {
+            System.out.println("Không tìm được bài trong cache: " + e.getMessage());
+            return null;
+        }
+    }
 }
