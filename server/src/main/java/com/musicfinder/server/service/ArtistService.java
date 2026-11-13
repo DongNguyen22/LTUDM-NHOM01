@@ -38,6 +38,8 @@ public class ArtistService {
     private final HistoryService historyService = new HistoryService();
     private final Map<Long, Object> artistSongLocks = new ConcurrentHashMap<>();
 
+    private static final int ARTIST_TTL_SECONDS = 3600;
+
     public ArtistService() {
         cache = new CacheService();
         api = new YtDlpApi();
@@ -119,7 +121,7 @@ public class ArtistService {
         }
 
         SearchArtistData response = new SearchArtistData(result, suggestions);
-        cache.saveArtists(keyword, response, 900);
+        cache.saveArtists(keyword, response, ARTIST_TTL_SECONDS);
         postSearchArtist(keyword, userId, result);
         return response;
     }
@@ -168,7 +170,7 @@ public class ArtistService {
                         : java.util.Collections.emptyList();
 
                 ViewArtistSongsData response = new ViewArtistSongsData(mergeSongs(artistId, songs));
-                cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, 900);
+                cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, ARTIST_TTL_SECONDS);
                 return Optional.of(response);
             }
         }
@@ -190,7 +192,7 @@ public class ArtistService {
                     if (videos == null)
                         throw new IllegalStateException("Không lấy được video của kênh");
                     ViewArtistSongsData response = new ViewArtistSongsData(mergeSongs(artistId, videos));
-                    cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, 900);
+                    cache.putValue(String.valueOf(artistId), "ARTIST_SONGS", response, ARTIST_TTL_SECONDS);
                     return Optional.of(response);
                 } catch (RuntimeException e) {
                     ViewArtistSongsData old = cache.getValueEvenIfExpired(String.valueOf(artistId),

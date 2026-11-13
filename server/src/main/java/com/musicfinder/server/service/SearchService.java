@@ -38,7 +38,8 @@ public class SearchService {
             "\\b(" + String.join("|", BAD_WORDS) + ")\\b", Pattern.CASE_INSENSITIVE);
     private static final int MIN_SECONDS = 60;
     private static final int MAX_SECONDS = 600;
-    private static final int LIST_CACHE_SECONDS = 3600; // 1 giờ
+    private static final int ZING_SONG_TTL_SECONDS = 3600;
+    private static final int YOUTUBE_SONG_TTL_SECONDS = 600;
 
     private final Map<String, Object> locks = new ConcurrentHashMap<>();
     private final Map<Long, Object> songLocks = new ConcurrentHashMap<>();
@@ -92,13 +93,15 @@ public class SearchService {
                 return cached;
 
             try {
+                boolean fromZing = true;
                 List<YtDlpApi.RemoteSong> found = zingApi.searchSongs(keyword);
                 if (found.isEmpty()) {
                     System.out.println("Zing MP3 không có kết quả, chuyển sang yt-dlp: " + keyword);
                     found = apiService.searchSongs(keyword);
+                    fromZing = false;
                 }
                 SearchSongData data = buildResult(keyword, found);
-                cache.saveSongs(keyword, data, LIST_CACHE_SECONDS);
+                cache.saveSongs(keyword, data, fromZing ? ZING_SONG_TTL_SECONDS : YOUTUBE_SONG_TTL_SECONDS);
                 return data;
             } catch (RuntimeException e) {
                 SearchSongData old = cache.getSongsEvenIfExpired(keyword);
