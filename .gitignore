@@ -34,3 +34,4 @@ keys/
 attacker/
 *.key
 !client/src/main/resources/server_public.key
+*cookies*
