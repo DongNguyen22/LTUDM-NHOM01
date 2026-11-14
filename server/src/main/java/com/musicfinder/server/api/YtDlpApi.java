@@ -178,6 +178,9 @@ public class YtDlpApi {
         command.add("--extractor-args");
         command.add("youtube:player_client=android,web");
         File cookies = new File("tools", "cookies.txt");
+        if (!cookies.isFile() || cookies.length() == 0) {
+            cookies = new File("tools", "www.youtube.com_cookies.txt");
+        }
         if (cookies.isFile() && cookies.length() > 0) {
             command.add("--cookies");
             command.add(cookies.getAbsolutePath());
