@@ -174,6 +174,19 @@ public class YtDlpApi {
         }
     }
 
+    private static void appendBypassArgs(List<String> command) {
+        command.add("--extractor-args");
+        command.add("youtube:player_client=android,web");
+        File cookies = new File("tools", "cookies.txt");
+        if (!cookies.isFile() || cookies.length() == 0) {
+            cookies = new File("tools", "www.youtube.com_cookies.txt");
+        }
+        if (cookies.isFile() && cookies.length() > 0) {
+            command.add("--cookies");
+            command.add(cookies.getAbsolutePath());
+        }
+    }
+
     public File downloadAudioToCache(String videoId) {
         if (videoId == null || !videoId.matches("[A-Za-z0-9_-]{11}"))
             return null;
@@ -195,13 +208,15 @@ public class YtDlpApi {
                 }
                 System.out.println("Đang tải và chuyển MP3: " + videoId);
                 String ffmpegName = System.getProperty("os.name").startsWith("Windows") ? "ffmpeg.exe" : "ffmpeg";
-                String[] command = { binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
+                List<String> command = new ArrayList<>(List.of(
+                        binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
                         "--force-overwrites",
                         "--socket-timeout", "20", "--retries", "1", "--extractor-retries", "1",
                         "--ffmpeg-location", new File("tools", ffmpegName).getAbsolutePath(), "-f", "ba/b", "-x",
                         "--audio-format", "mp3", "--audio-quality", "128K", "-o",
-                        new File(directory, videoId + ".download.%(ext)s").getAbsolutePath(),
-                        "--", "https://www.youtube.com/watch?v=" + videoId };
+                        new File(directory, videoId + ".download.%(ext)s").getAbsolutePath()));
+                appendBypassArgs(command);
+                command.addAll(List.of("--", "https://www.youtube.com/watch?v=" + videoId));
                 process = new ProcessBuilder(command).inheritIO().start();
                 if (!process.waitFor(180, TimeUnit.SECONDS)) {
                     System.out.println("Tải MP3 quá thời gian chờ 180 giây");
@@ -262,12 +277,14 @@ public class YtDlpApi {
             // video dọc (Shorts) 720p có height=1280 nên [height<=360] chỉ còn lại bản
             // 144p.
             String format = "bv*[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4][vcodec^=avc1]";
-            String[] command = { binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
+            List<String> command = new ArrayList<>(List.of(
+                    binaryPath, "--ignore-config", "--no-playlist", "--no-progress",
                     "--force-overwrites", "--socket-timeout", "20", "--retries", "1",
                     "--extractor-retries", "1", "--ffmpeg-location", ffmpeg,
                     "-f", format, "-S", "res:720", "--merge-output-format", "mp4", "--max-filesize", "100M",
-                    "-o", new File(directory, videoId + ".download.%(ext)s").getAbsolutePath(),
-                    "--", "https://www.youtube.com/watch?v=" + videoId };
+                    "-o", new File(directory, videoId + ".download.%(ext)s").getAbsolutePath()));
+            appendBypassArgs(command);
+            command.addAll(List.of("--", "https://www.youtube.com/watch?v=" + videoId));
             process = new ProcessBuilder(command).inheritIO().start();
             if (!process.waitFor(180, TimeUnit.SECONDS))
                 throw new IllegalStateException("Tải video quá thời gian chờ 180 giây");
@@ -514,6 +531,7 @@ public class YtDlpApi {
             command.addAll(List.of("--ignore-config", "--dump-single-json", "--skip-download", "--no-warnings",
                     "--ignore-no-formats-error", "--socket-timeout", "8", "--retries", "1", "--extractor-retries",
                     "1"));
+            appendBypassArgs(command);
             command.addAll(arguments);
             process = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.INHERIT).start();
             Process started = process;
