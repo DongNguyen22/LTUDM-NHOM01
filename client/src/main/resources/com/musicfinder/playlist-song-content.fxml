@@ -6,84 +6,93 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.shape.Rectangle?>
 
-<!-- Assign fx:controller when the playlist song controller is ready. -->
 <VBox xmlns="http://javafx.com/javafx/21"
-    xmlns:fx="http://javafx.com/fxml/1" stylesheets="@css/playlist-song.css" spacing="26" styleClass="playlist-song-page" fx:controller="com.musicfinder.controller.playlist_songController">
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.playlist_songController" spacing="18" styleClass="playlist-song-page" stylesheets="@css/playlist-song.css">
+
     <padding>
-        <Insets top="32" right="36" bottom="40" left="36"/>
+        <Insets top="28" right="30" bottom="25" left="30"/>
     </padding>
-    <Button fx:id="backButton" text="My playlists" graphicTextGap="10" styleClass="playlist-back">
-        <graphic>
-            <SVGPath content="M12 6H2 M6 2L2 6l4 4" styleClass="playlist-outline-icon"/>
-        </graphic>
-    </Button>
 
-    <!-- <HBox alignment="CENTER_RIGHT">
-        <Region HBox.hgrow="ALWAYS"/>
-        <TextField fx:id="searchField" promptText="Search playlist songs..." prefWidth="280" styleClass="playlist-song-search"/>
-    </HBox> -->
+    <!-- Breadcrumb / Back -->
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Button fx:id="backButton" text="YOUR LIBRARY / MY PLAYLISTS" graphicTextGap="8" styleClass="playlist-back">
+            <graphic>
+                <SVGPath content="M12 6H2 M6 2L2 6l4 4" styleClass="playlist-outline-icon"/>
+            </graphic>
+        </Button>
+        <Label text="/ PLAYLIST" styleClass="playlist-eyebrow"/>
+    </HBox>
 
-    <HBox spacing="28" alignment="CENTER_LEFT" styleClass="playlist-hero">
-        <StackPane minWidth="180" prefWidth="180" maxWidth="180" minHeight="180" prefHeight="180" maxHeight="180" styleClass="playlist-cover-frame">
-            <ImageView fx:id="playlistCover" fitWidth="180" fitHeight="180" preserveRatio="false" smooth="true">
+    <!-- Title -->
+    <HBox spacing="20" alignment="CENTER_LEFT">
+        <StackPane minWidth="96" prefWidth="96" maxWidth="96" minHeight="96" prefHeight="96" maxHeight="96" styleClass="playlist-cover-frame">
+            <ImageView fx:id="playlistCover" fitWidth="96" fitHeight="96" preserveRatio="false" smooth="true">
                 <image>
                     <Image url="@assets/cover-blue-flower.png"/>
                 </image>
                 <clip>
-                    <Rectangle width="180" height="180" arcWidth="16" arcHeight="16"/>
+                    <Rectangle width="96" height="96" arcWidth="14" arcHeight="14"/>
                 </clip>
             </ImageView>
         </StackPane>
-        <VBox spacing="15" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" minWidth="0">
-            <Label text="YOUR PLAYLIST" styleClass="playlist-eyebrow"/>
-            <Label fx:id="playlistNameLabel" text="Chill Music" wrapText="true" styleClass="playlist-detail-title"/>
-            <Label fx:id="playlistDescriptionLabel" text="Slow down and let the music play." wrapText="true" styleClass="playlist-description"/>
-            <Label fx:id="songCountLabel" text="0 songs" styleClass="playlist-metadata"/>
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Button fx:id="playAllButton" text="Play all" graphicTextGap="10" styleClass="playlist-play-all">
-                    <graphic>
-                        <SVGPath content="M1 0L9 5 1 10z" styleClass="playlist-play-icon"/>
-                    </graphic>
-                </Button>
-                <Button fx:id="editPlaylistButton" text="Edit playlist" graphicTextGap="10" styleClass="playlist-edit-button">
-                    <graphic>
-                        <SVGPath content="M2 9l7-7 3 3-7 7H2z M8 3l3 3" styleClass="playlist-outline-icon"/>
-                    </graphic>
-                </Button>
-                <Button fx:id="deletePlaylistButton" accessibleText="Delete playlist" styleClass="playlist-delete-button">
-                    <tooltip>
-                        <Tooltip text="Delete playlist"/>
-                    </tooltip>
-                    <graphic>
-                        <SVGPath content="M1 3h12 M5 3V1h4v2 M2 3l1 11h8l1-11 M5 6v5 M9 6v5" styleClass="playlist-outline-icon"/>
-                    </graphic>
-                </Button>
-                <HBox alignment="CENTER_RIGHT">
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <TextField fx:id="searchField" promptText="Search playlist songs..." prefWidth="280" styleClass="playlist-song-search"/>
-                </HBox>
-            </HBox>
+
+        <VBox spacing="6" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" minWidth="0">
+            <Label fx:id="playlistNameLabel" text="Playlist" wrapText="true" styleClass="playlist-title"/>
+            <Label fx:id="playlistDescriptionLabel" text="" wrapText="true" styleClass="playlist-subtitle"/>
         </VBox>
+
+        <Label fx:id="songCountLabel" text="0 songs" minWidth="-Infinity" styleClass="playlist-count"/>
     </HBox>
 
-    <Label fx:id="playlistMessageLabel" text="" wrapText="true" visible="false" managed="false" styleClass="playlist-detail-message"/>
+    <!-- Toolbar: actions + search -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button fx:id="playAllButton" text="Play all" graphicTextGap="10" styleClass="playlist-play-all">
+            <graphic>
+                <SVGPath content="M1 0L9 5 1 10z" styleClass="playlist-play-icon"/>
+            </graphic>
+        </Button>
+        <Button fx:id="editPlaylistButton" text="Edit playlist" graphicTextGap="10" styleClass="playlist-edit-button">
+            <graphic>
+                <SVGPath content="M2 9l7-7 3 3-7 7H2z M8 3l3 3" styleClass="playlist-outline-icon"/>
+            </graphic>
+        </Button>
+        <Button fx:id="deletePlaylistButton" accessibleText="Delete playlist" styleClass="playlist-delete-button">
+            <tooltip>
+                <Tooltip text="Delete playlist"/>
+            </tooltip>
+            <graphic>
+                <SVGPath content="M1 3h12 M5 3V1h4v2 M2 3l1 11h8l1-11 M5 6v5 M9 6v5" styleClass="playlist-outline-icon"/>
+            </graphic>
+        </Button>
 
+        <Region HBox.hgrow="ALWAYS"/>
 
+        <TextField fx:id="searchField" promptText="Search playlist songs..." prefWidth="280" styleClass="playlist-search"/>
+    </HBox>
 
-    <VBox fx:id="songTable" styleClass="playlist-song-table" VBox.vgrow="ALWAYS" minHeight="0">
-        <!-- Fixed column widths match createSongRow(); SONG fills the remaining space. -->
-        <HBox spacing="12" alignment="CENTER_LEFT" styleClass="playlist-song-header">
-            <Label text="#" minWidth="28" prefWidth="28" maxWidth="28" styleClass="playlist-column-label"/>
-            <Label text="SONG" minWidth="0" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="playlist-column-label"/>
-            <Label text="ARTISTS" minWidth="155" prefWidth="155" maxWidth="155" styleClass="playlist-column-label"/>
-            <Label text="DURATION" minWidth="75" prefWidth="75" maxWidth="75" styleClass="playlist-column-label"/>
-            <Label text="ACTIONS" minWidth="120" prefWidth="120" maxWidth="120" styleClass="playlist-column-label"/>
+    <Label fx:id="playlistMessageLabel" text="" wrapText="true" visible="false" managed="false" styleClass="playlist-message"/>
+
+    <!-- Song table -->
+    <VBox fx:id="songTable" styleClass="playlist-table">
+
+        <!-- Header: widths match createSongRow() -->
+        <HBox spacing="12" alignment="CENTER_LEFT" styleClass="playlist-table-header">
+            <Label text="#" minWidth="28" styleClass="playlist-column"/>
+            <Label text="SONG" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="playlist-column"/>
+            <Label text="ARTISTS" prefWidth="155" styleClass="playlist-column"/>
+            <Label text="DURATION" prefWidth="75" styleClass="playlist-column"/>
+            <Label text="ACTIONS" prefWidth="120" styleClass="playlist-column"/>
         </HBox>
-        <!-- Add song rows here from the controller. -->
-        <ScrollPane fx:id="playlistScroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" minHeight="0" prefHeight="280" VBox.vgrow="ALWAYS" styleClass="playlist-song-scroll">
+
+        <!-- Danh sách bài hát -->
+        <ScrollPane fx:id="playlistScroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" prefHeight="320" styleClass="playlist-scroll">
             <content>
-                <VBox fx:id="songList" spacing="0" styleClass="playlist-song-list"/>
+                <VBox fx:id="songList" spacing="0" styleClass="playlist-list"/>
             </content>
         </ScrollPane>
     </VBox>
+
+    <!-- Empty state -->
+    <Label fx:id="emptyLabel" text="This playlist has no songs yet." visible="false" managed="false" styleClass="playlist-empty"/>
+
 </VBox>

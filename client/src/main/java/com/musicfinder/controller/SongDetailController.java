@@ -149,6 +149,9 @@ public class SongDetailController {
                 StatusDialog.error(playButton.getScene().getWindow(), "Lỗi chuyển màn hình!");
             }
         });
+        playlistButton.setOnAction(event -> {
+            handleAddToPlaylist(song);
+        });
     }
 
     public void init(SongData song) {
@@ -588,5 +591,12 @@ public class SongDetailController {
                 return;
             });
         }
+    }
+
+    private void handleAddToPlaylist(SongData song) {
+        if (song == null || lyricsLabel.getScene() == null) {
+            return;
+        }
+        AddSongToPlaylistDialog.show(lyricsLabel.getScene().getWindow(), song);
     }
 }

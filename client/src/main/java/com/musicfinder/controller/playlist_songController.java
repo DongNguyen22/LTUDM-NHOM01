@@ -33,6 +33,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -77,6 +78,8 @@ public class playlist_songController {
     private TextField searchField;
     @FXML
     private ScrollPane playlistScroll;
+    @FXML
+    private Label emptyLabel;
 
     private PlayListData playlist;
     private List<SongData> originalSongList = new ArrayList<>();
@@ -89,7 +92,7 @@ public class playlist_songController {
         playlistDescriptionLabel.setText(
                 playlist.description() == null ? "" : playlist.description());
 
-        songCountLabel.setText(originalSongList.size() + (originalSongList.size() > 1 ? "Songs" : "Song"));
+        updateSongCount();
         updatePlaylistCover(playlist.thumbnailUrl());
         searchField.textProperty().addListener(
                 (observable, oldValue, newValue) -> filterSongs(newValue));
@@ -119,7 +122,8 @@ public class playlist_songController {
             ClientConnection.getInstance().send(request, response -> {
                 Platform.runLater(() -> {
                     if (!response.isSuccess()) {
-                        StatusDialog.error(songList.getScene().getWindow(), "Lỗi kết nối server!");
+                        showMessage(response.getMessage());
+                        renderSongs(List.of());
                         return;
                     }
                     GetPlaylistSongsData data = response.dataAs(GetPlaylistSongsData.class);
@@ -129,17 +133,27 @@ public class playlist_songController {
                         originalSongList.addAll(data.songs());
                     }
 
-                    songCountLabel.setText(originalSongList.size() + " songs");
+                    showMessage(null);
+                    updateSongCount();
                     filterSongs(searchField.getText());
                 });
             });
         } catch (Exception e) {
-            // TODO: handle exception
-            Platform.runLater(() -> {
-                StatusDialog.error(songList.getScene().getWindow(), "Lỗi kết nối server!");
-
-            });
+            // init() có thể chạy trước khi root được gắn vào Scene -> hiện lỗi ngay trên trang
+            Platform.runLater(() -> showMessage("Lỗi kết nối server: " + e.getMessage()));
         }
+    }
+
+    private void updateSongCount() {
+        int count = originalSongList.size();
+        songCountLabel.setText(count + (count == 1 ? " song" : " songs"));
+    }
+
+    private void showMessage(String message) {
+        boolean show = message != null && !message.isBlank();
+        playlistMessageLabel.setText(show ? message : "");
+        playlistMessageLabel.setVisible(show);
+        playlistMessageLabel.setManaged(show);
     }
 
     private void renderSongs(List<SongData> songs) {
@@ -150,21 +164,29 @@ public class playlist_songController {
             songList.getChildren().add(row);
         }
 
+        boolean isEmpty = songs.isEmpty();
+        emptyLabel.setText(originalSongList.isEmpty()
+                ? "This playlist has no songs yet."
+                : "No songs match your search.");
+        emptyLabel.setVisible(isEmpty);
+        emptyLabel.setManaged(isEmpty);
+        playAllButton.setDisable(originalSongList.isEmpty());
+
         playlistScroll.setPrefHeight(
-                Math.min(320, Math.max(60, songs.size() * 68)));
+                Math.min(320, Math.max(60, songs.size() * 74)));
     }
 
     private HBox createSongRow(SongData song, int index) {
 
         HBox row = new HBox(12);
         row.setAlignment(Pos.CENTER_LEFT);
-        row.getStyleClass().add("favorite-row");
+        row.getStyleClass().add("playlist-row");
 
         // ===== RANK =====
 
         Label rankLabel = new Label(String.format("%02d", index));
 
-        rankLabel.getStyleClass().add("favorite-rank");
+        rankLabel.getStyleClass().add("playlist-rank");
 
         // ===== THUMBNAIL =====
 
@@ -174,7 +196,7 @@ public class playlist_songController {
         thumbnail.setFitHeight(52);
         thumbnail.setPreserveRatio(false);
 
-        thumbnail.getStyleClass().add("favorite-cover");
+        thumbnail.getStyleClass().add("playlist-row-cover");
 
         if (song.thumbnail_url() != null && !song.thumbnail_url().isBlank()) {
 
@@ -235,29 +257,32 @@ public class playlist_songController {
                         "19.58 3 22 5.42 22 8.5 " +
                         "c0 3.78-3.4 6.86-8.55 11.54L12 21.35z");
 
-        heartIcon.getStyleClass().add("favorite-icon");
+        heartIcon.getStyleClass().add("playlist-heart-icon");
 
         Button favoriteButton = new Button();
         favoriteButton.setGraphic(heartIcon);
+        favoriteButton.getStyleClass().addAll("playlist-action-button", "playlist-action-favorite");
+        favoriteButton.setTooltip(new Tooltip("Add to favorites"));
 
         // Tạo icon thùng rác từ SVG path
         SVGPath trashIcon = new SVGPath();
         trashIcon.setContent(
                 "M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M10 11v6 M14 11v6");
-        trashIcon.getStyleClass().add("favorite-trash-icon");
+        trashIcon.getStyleClass().add("playlist-trash-icon");
 
         // Gán vào Button
         Button deleteButton = new Button("", trashIcon);
-        deleteButton.getStyleClass().addAll("favorite-action-button", "favorite-action-delete");
+        deleteButton.getStyleClass().addAll("playlist-action-button", "playlist-action-delete");
+        deleteButton.setTooltip(new Tooltip("Remove from playlist"));
         // ===== PLAY =====
 
         Button playButton = new Button("▶");
 
-        playButton.getStyleClass().addAll("favorite-action-button", "favorite-action-play");
+        playButton.getStyleClass().addAll("playlist-action-button", "playlist-action-play");
 
         HBox actionGroup = new HBox(8, favoriteButton, deleteButton, playButton);
         actionGroup.setAlignment(Pos.CENTER_RIGHT);
-        actionGroup.getStyleClass().add("favorite-actions");
+        actionGroup.getStyleClass().add("playlist-actions");
         actionGroup.setPrefWidth(120);
         actionGroup.setMinWidth(120);
         actionGroup.setMaxWidth(120);
@@ -272,9 +297,11 @@ public class playlist_songController {
         });
         deleteButton.setOnAction(event -> {
             handleRemoveFromPlaylist(song);
+            event.consume();
         });
         favoriteButton.setOnAction(event -> {
             handlleAddToFavorite(song);
+            event.consume();
         });
 
         return row;
@@ -316,8 +343,9 @@ public class playlist_songController {
     @FXML
     private void handleRemoveFromPlaylist(SongData song) {
 
-        Boolean confirm = ConfirmDialog.show(songList.getScene().getWindow(), "Hello", "Confirm your action");
-        if (!confirm) {
+        Boolean confirm = ConfirmDialog.show(songList.getScene().getWindow(), "Remove song",
+                "Remove \"" + song.title() + "\" from this playlist?");
+        if (!Boolean.TRUE.equals(confirm)) {
             return;
         }
         Add_RemoveToPlaylistPayload payload = new Add_RemoveToPlaylistPayload(playlist.playlistID(), song,
@@ -338,7 +366,7 @@ public class playlist_songController {
                     }
                     StatusDialog.success(songList.getScene().getWindow(), response.getMessage());
                     filterSongs(searchField.getText());
-                    songCountLabel.setText(originalSongList.size() + (originalSongList.size() > 1 ? "Songs" : "Song"));
+                    updateSongCount();
                 });
             });
         } catch (Exception e) {
@@ -353,6 +381,11 @@ public class playlist_songController {
     }
 
     private void handleDeletePlaylist() {
+        Boolean confirm = ConfirmDialog.show(songList.getScene().getWindow(), "Delete playlist",
+                "Delete \"" + playlistNameLabel.getText() + "\"? This cannot be undone.");
+        if (!Boolean.TRUE.equals(confirm)) {
+            return;
+        }
         Remove_OpenPlaylistPayload payload = new Remove_OpenPlaylistPayload(playlist.playlistID());
         Request request = Request.of(Action.DELETE_PLAYLIST, payload);
         try {

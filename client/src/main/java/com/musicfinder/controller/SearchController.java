@@ -268,6 +268,7 @@ public class SearchController {
         });
         playListButton.setOnAction(event -> {
             handleAddToPlaylist(song);
+            event.consume();
         });
         favoriteButton.setOnAction(event -> {
             handlleAddToFavorite(song);
@@ -282,10 +283,10 @@ public class SearchController {
     }
 
     private void handleAddToPlaylist(SongData song) {
-
-        AddSongToPlaylistDialog.show(searchResultsList.getScene().getWindow(), song, () -> {
-            System.out.println("Thêm bài hát vào playlist thành công!");
-        });
+        if (song == null || searchResultsList.getScene() == null) {
+            return;
+        }
+        AddSongToPlaylistDialog.show(searchResultsList.getScene().getWindow(), song);
     }
 
     private void handlleAddToFavorite(SongData song) {
