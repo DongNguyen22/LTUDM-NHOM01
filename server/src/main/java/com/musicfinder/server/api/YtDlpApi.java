@@ -175,8 +175,8 @@ public class YtDlpApi {
     }
 
     private static void appendBypassArgs(List<String> command) {
-        command.add("--extractor-args");
-        command.add("youtube:player_client=android,web");
+        command.add("--js-runtimes");
+        command.add("node");
         File cookies = new File("tools", "cookies.txt");
         if (!cookies.isFile() || cookies.length() == 0) {
             cookies = new File("tools", "www.youtube.com_cookies.txt");
@@ -184,6 +184,9 @@ public class YtDlpApi {
         if (cookies.isFile() && cookies.length() > 0) {
             command.add("--cookies");
             command.add(cookies.getAbsolutePath());
+        } else {
+            command.add("--extractor-args");
+            command.add("youtube:player_client=android,web");
         }
     }
 
