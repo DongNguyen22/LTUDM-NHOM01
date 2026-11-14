@@ -285,7 +285,8 @@ public class SongRepository {
                             rs.getString("thumbnail_url"),
                             rs.getLong("search_count"),
                             rs.getString("preview_url"),
-                            rs.getString("external_id")));
+                            rs.getString("external_id"),
+                            null));
                 }
             }
             return list;
@@ -311,6 +312,34 @@ public class SongRepository {
         } catch (SQLException e) {
             log.error("Lỗi truy vấn top bài hát thịnh hành: {}", e.getMessage(), e);
             throw new DataException("Lỗi truy vấn top bài hát thịnh hành", e);
+        }
+    }
+
+    public String findLyric(Long songId) {
+        String sql = "SELECT lyric FROM SONGS WHERE song_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, songId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next())
+                    return rs.getString("lyric"); // cột NULL -> getString trả null
+            }
+            return null;
+        } catch (SQLException e) {
+            log.error("Lỗi đọc lời bài hát [{}]: {}", songId, e.getMessage(), e);
+            throw new DataException("Lỗi đọc lời bài hát ID " + songId, e);
+        }
+    }
+
+    public boolean updateLyric(Long songId, String lyric) {
+        String sql = "UPDATE SONGS SET lyric = ?, updated_at = CURRENT_TIMESTAMP WHERE song_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lyric);
+            ps.setLong(2, songId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new DataException("Không cập nhật được lời bài hát ID " + songId, e);
         }
     }
 }

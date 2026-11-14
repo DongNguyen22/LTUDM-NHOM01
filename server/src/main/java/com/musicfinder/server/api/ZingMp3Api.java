@@ -93,15 +93,17 @@ public class ZingMp3Api {
                     .execute()
                     .body();
 
-            ZingLyric result = parseLyric(body);
-            if (result.text() != null || !result.reliable())
-                return result;
+            ZingLyric plain = parseLyric(body);
+            if (!plain.reliable())
+                return plain;
 
             String lrcUrl = lrcUrl(body);
-            if (lrcUrl == null)
-                return result;
-            String text = downloadLrc(lrcUrl);
-            return new ZingLyric(text.isEmpty() ? null : text, true);
+            if (lrcUrl != null) {
+                String lrc = downloadLrc(lrcUrl);
+                if (!lrc.isEmpty())
+                    return new ZingLyric(lrc, true);
+            }
+            return plain;
         } catch (IOException | JSONException e) {
             System.out.println("Không lấy được lời từ Zing MP3: " + e.getMessage());
             return null;
@@ -121,7 +123,11 @@ public class ZingMp3Api {
                 .maxBodySize(1_000_000)
                 .execute()
                 .bodyAsBytes();
-        return lrcToText(new String(bytes, StandardCharsets.UTF_8));
+        return normalizeLrc(new String(bytes, StandardCharsets.UTF_8));
+    }
+
+    static String normalizeLrc(String lrc) {
+        return lrc.replace("\uFEFF", "").replace("\r\n", "\n").replace("\r", "\n").trim();
     }
 
     static String lrcToText(String lrc) {

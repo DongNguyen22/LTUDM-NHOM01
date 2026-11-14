@@ -20,6 +20,7 @@ public class AudioStreamServer {
     private static final long VIDEO_CACHE_TIME_MS = 6L * 60 * 60 * 1000;
     private final int port;
     private final File directory;
+    private final File avatarDirectory = new File(System.getProperty("music.avatar.directory", "storage/avatar"));
     private final File videoDirectory = new File(System.getProperty("music.video.directory", "storage/video"));
     private final Map<HttpExchange, File> activeFiles = new HashMap<>();
     private HttpServer server;
@@ -43,6 +44,10 @@ public class AudioStreamServer {
         return baseUrl() + "/video/" + videoId + ".mp4";
     }
 
+    public static String getAvatarUrl(String fileName) {
+        return baseUrl() + "/avatar/" + fileName;
+    }
+
     private static String baseUrl() {
         int port = Integer.getInteger("music.audio.port", 8088);
         String base = System.getProperty("music.audio.baseUrl", "http://127.0.0.1:" + port);
@@ -55,11 +60,15 @@ public class AudioStreamServer {
         try {
             Files.createDirectories(directory.toPath());
             Files.createDirectories(videoDirectory.toPath());
+            Files.createDirectories(avatarDirectory.toPath());
+
             server = HttpServer.create(new InetSocketAddress(port), 0);
             pool = Executors.newScheduledThreadPool(8);
             server.setExecutor(pool);
             server.createContext("/audio/", this::sendAudio);
             server.createContext("/video/", this::sendVideo);
+            server.createContext("/avatar/", this::sendAvatar);
+
             cleanupOldFiles();
             pool.scheduleAtFixedRate(this::cleanupOldFiles, 1, 1, TimeUnit.HOURS);
             server.start();
@@ -82,6 +91,18 @@ public class AudioStreamServer {
 
     private void sendVideo(HttpExchange exchange) {
         sendFile(exchange, "/video/", videoDirectory, "[A-Za-z0-9_-]{11}\\.mp4", "video/mp4");
+    }
+
+    private void sendAvatar(HttpExchange exchange) {
+        String path = exchange.getRequestURI().getPath().toLowerCase();
+        String contentType = "image/png";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+            contentType = "image/jpeg";
+        } else if (path.endsWith(".webp")) {
+            contentType = "image/webp";
+        }
+        // Regex cho phép chữ, số, gạch ngang và đuôi ảnh (ngăn chặn Path Traversal)
+        sendFile(exchange, "/avatar/", avatarDirectory, "[A-Za-z0-9_\\-\\.]+\\.(png|jpg|jpeg|webp)", contentType);
     }
 
     private void sendFile(HttpExchange exchange, String prefix, File dir, String nameRegex, String contentType) {
