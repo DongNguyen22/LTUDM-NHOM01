@@ -175,6 +175,11 @@ public class YtDlpApi {
     }
 
     private static void appendBypassArgs(List<String> command) {
+        File customNode = new File("tools/node-runtime/bin/node");
+        if (customNode.isFile()) {
+            command.add("--js-runtimes");
+            command.add("node:" + customNode.getAbsolutePath());
+        }
         command.add("--remote-components");
         command.add("ejs:github");
         File cookies = new File("tools", "cookies.txt");
