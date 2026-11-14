@@ -14,6 +14,7 @@ import com.musicfinder.shared.request.payload.ChangePasswordProfilePayload;
 import com.musicfinder.shared.request.payload.EditProfilePayload;
 import com.musicfinder.shared.request.payload.LoginPayload;
 import com.musicfinder.shared.request.payload.RegisterPayload;
+import com.musicfinder.shared.request.payload.UpdatePasswordPayload;
 import com.musicfinder.shared.response.payload.UserData;
 import com.musicfinder.server.network.AudioStreamServer;
 
@@ -91,6 +92,16 @@ public class AuthService {
         return DtoMapper.toUserData(user);
     }
 
+    // Lấy thông tin người dùng theo email
+    public UserData getUserByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập email");
+        }
+        Users user = userRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với email này"));
+        return DtoMapper.toUserData(user);
+    }
+
     public UserData getById(Long userId) {
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại" + userId));
@@ -115,6 +126,20 @@ public class AuthService {
         }
         userRepository.update(user);
         return DtoMapper.toUserData(user);
+    }
+
+    // Cập nhật mật khẩu theo email sau khi đã xác thực quyền đặt lại mật khẩu.
+    public boolean updatePassword(UpdatePasswordPayload payload) {
+        if (payload == null || payload.email() == null || payload.email().isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập email");
+        }
+        if (payload.password() == null || payload.password().trim().length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu mới phải có ít nhất 6 ký tự!");
+        }
+        Users user = userRepository.findByEmail(payload.email().trim())
+                .orElseThrow(() -> new IllegalArgumentException("Email không tồn tại trong hệ thống!"));
+        String newHash = PasswordHash.hashPassword(payload.password().trim());
+        return userRepository.updatePassword(user.getUserId(), newHash);
     }
 
     // Đổi mật khẩu

@@ -9,6 +9,7 @@ import com.musicfinder.server.service.CacheService;
 import com.musicfinder.shared.request.payload.SongPayload;
 import com.musicfinder.shared.response.payload.LyricData;
 import com.musicfinder.server.service.LyricService;
+import com.musicfinder.server.service.OtpService;
 import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.HistoryData;
 import com.musicfinder.shared.response.payload.KeywordStatisticData;
@@ -38,13 +39,17 @@ import com.musicfinder.shared.request.payload.ChangePasswordProfilePayload;
 import com.musicfinder.shared.request.payload.Create_UpdateToPlaylistPayload;
 import com.musicfinder.shared.request.payload.EditProfilePayload;
 import com.musicfinder.shared.request.payload.SearchPayload;
+import com.musicfinder.shared.request.payload.SendOtpPayload;
 import com.musicfinder.shared.request.payload.LoginPayload;
 import com.musicfinder.shared.request.payload.RegisterPayload;
 import com.musicfinder.shared.request.payload.RemoveRowSearchHistory;
 import com.musicfinder.shared.request.payload.Remove_OpenPlaylistPayload;
 import com.musicfinder.shared.request.payload.StatisticsPayload;
+import com.musicfinder.shared.request.payload.UpdatePasswordPayload;
+import com.musicfinder.shared.request.payload.VerifyOtpPayload;
 import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
 
+import com.musicfinder.server.util.PasswordHash;
 /* NOTE CHO CLIENT
  * Response TCP: {requestId, action, status, message, data}; đọc data khi status = SUCCESS.
  * SEARCH_SONG   {keyword} -> data = {songs: SongData[], suggestions: SongData[]}.
@@ -74,6 +79,7 @@ public class RequestDispatcher {
     private final VideoService videoService;
     private final LyricService lyricService;
     private final CacheService cacheService = new CacheService();
+    private final OtpService otpService = new OtpService();
 
     public RequestDispatcher() {
         this(new YtDlpApi());
@@ -140,6 +146,31 @@ public class RequestDispatcher {
                     ChangePasswordProfilePayload payload = request.dataAs(ChangePasswordProfilePayload.class);
                     authService.changePassword(user.userName(), payload);
                     return Response.success(request, "Đổi mật khẩu thành công");
+                }
+                case SEND_OTP: {
+
+                    SendOtpPayload payload = request.dataAs(SendOtpPayload.class);
+                    try {
+                        UserData user = authService.getUserByEmail(payload.email());
+                    } catch (IllegalArgumentException e) {
+                        return Response.error(request, Status.NOT_FOUND, "Email không tồn tại trong hệ thống!");
+                    }
+                    otpService.sendOtp(payload.email());
+                    return Response.success(request, "Đã gửi mã OTP tới email");
+                }
+                case VERIFY_OTP: {
+                    VerifyOtpPayload payload = request.dataAs(VerifyOtpPayload.class);
+                    otpService.verifyOtp(payload.email(), payload.otp());
+                    return Response.success(request, "Xác thực OTP thành công");
+                }
+                case UPDATE_PASSWORD: {
+                    UpdatePasswordPayload payload = request.dataAs(UpdatePasswordPayload.class);
+                    boolean updated = authService.updatePassword(payload);
+
+                    return updated
+                            ? Response.success(request, "Cập nhật mật khẩu thành công")
+                            : Response.error(request, Status.ERROR,
+                                    "Cập nhật mật khẩu thất bại");
                 }
 
                 // ===== Thống kê =====

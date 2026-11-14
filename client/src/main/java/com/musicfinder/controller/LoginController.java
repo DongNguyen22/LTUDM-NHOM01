@@ -139,7 +139,12 @@ public class LoginController {
 
     @FXML
     private void handleForgotPassword() {
-        showMessage("Forgot password screen will be added later.", true);
+        try {
+            Navigator.goTo(Screen.FORGOT_PASSWORD);
+        } catch (IOException e) {
+            showMessage("Không thể mở trang quên mật khẩu.", false);
+            e.printStackTrace();
+        }
     }
 
     @FXML
