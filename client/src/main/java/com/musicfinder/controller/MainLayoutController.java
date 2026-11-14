@@ -206,8 +206,9 @@ public class MainLayoutController implements PlayerListener {
 
         Parent content = loader.load();
         Object controller = loader.getController();
-        if (controller instanceof SearchController) {
-            searchController = (SearchController) controller;
+        if (controller instanceof ForgotPasswordController) {
+
+            SearchController searchController = (SearchController) controller;
             searchController.setMainLayoutController(this);
         }
         contentContainer.getChildren().setAll(content);
@@ -226,8 +227,9 @@ public class MainLayoutController implements PlayerListener {
 
         Parent content = loader.load();
         Object controller = loader.getController();
-        if (controller instanceof SearchController) {
-            searchController = (SearchController) controller;
+        if (controller instanceof ForgotPasswordController) {
+
+            SearchController searchController = (SearchController) controller;
             searchController.setMainLayoutController(this);
         } else if (controller instanceof ForgotPasswordController) {
             ForgotPasswordController forgotController = (ForgotPasswordController) controller;

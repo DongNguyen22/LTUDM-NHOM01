@@ -2,64 +2,75 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
-<ScrollPane xmlns="http://javafx.com/javafx/21"
-    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.SongDetailController" fitToWidth="true" hbarPolicy="NEVER" styleClass="song-detail" stylesheets="@css/song-detail.css">
-    <content>
-        <VBox spacing="20" styleClass="detail-page">
-            <Button text="←  Back to results" styleClass="detail-back"/>
-            <HBox spacing="30" alignment="CENTER_LEFT" styleClass="detail-hero">
-                <StackPane minWidth="210" prefWidth="210" maxWidth="210" minHeight="210" prefHeight="210" maxHeight="210" styleClass="detail-cover">
-                    <Label text="♫" styleClass="cover-fallback"/>
-                    <ImageView fx:id="coverImage" fitWidth="210" fitHeight="210" preserveRatio="false"/>
-                </StackPane>
-                <VBox spacing="14" HBox.hgrow="ALWAYS" minWidth="0">
-                    <Label text="SONG DETAIL" styleClass="detail-eyebrow"/>
-                    <VBox spacing="3">
-                        <Label fx:id="titleLabel" text="Song detail" wrapText="true" styleClass="detail-title"/>
-                        <Label fx:id="artistLabel" text="Unknown artist" wrapText="true" styleClass="detail-artist-link"/>
-                    </VBox>
-                    <FlowPane hgap="28" vgap="12" styleClass="detail-metadata">
-                        <VBox spacing="6">
-                            <Label text="COMPOSER" styleClass="meta-key"/>
-                            <Label fx:id="composerLabel" text="—" wrapText="true" maxWidth="180" styleClass="meta-value"/>
-                        </VBox>
-                        <VBox spacing="6">
-                            <Label text="DURATION" styleClass="meta-key"/>
-                            <Label fx:id="durationLabel" text="—" styleClass="meta-value"/>
-                        </VBox>
-                    </FlowPane>
-                    <FlowPane hgap="8" vgap="8">
-                        <Button text="▶  Play song" styleClass="detail-primary"/>
-                        <Button text="＋  Add to playlist" styleClass="detail-secondary"/>
-                        <Button fx:id="favoriteButton" text="♡" accessibleText="Add to favorites" styleClass="detail-secondary, detail-heart"/>
-                    </FlowPane>
-                </VBox>
-            </HBox>
-            <HBox spacing="24" styleClass="detail-tabs">
-                <ToggleButton fx:id="lyricsTab" text="Lyrics" styleClass="detail-tab"/>
-                <ToggleButton fx:id="videoTab" text="Xem Video" styleClass="detail-tab"/>
-            </HBox>
-            <StackPane>
-                <VBox fx:id="lyricsPane" visible="false" managed="false" spacing="16" styleClass="detail-card">
-                    <Label text="LYRICS" styleClass="detail-eyebrow"/>
-                    <Label text="Chưa có lời bài hát cho bài hát này." styleClass="detail-muted"/>
-                </VBox>
-                <VBox fx:id="videoPane" visible="false" managed="false" spacing="16" styleClass="detail-card">
-                    <Label text="XEM VIDEO" styleClass="detail-eyebrow"/>
-                    <Label text="Music video" styleClass="card-title"/>
-                    <!-- Khung video 16:9; MediaView được controller thêm vào -->
-                    <StackPane fx:id="videoContainer" styleClass="video-container" minHeight="200" prefHeight="360">
-                        <Label fx:id="videoStatusLabel" text="Chọn tab để tải video" wrapText="true" styleClass="video-status"/>
+<StackPane xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.SongDetailController" stylesheets="@css/song-detail.css">
+    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="song-detail">
+        <content>
+            <VBox spacing="20" styleClass="detail-page">
+                <Button fx:id="backToSearch" text="←  Back to results" styleClass="detail-back"/>
+                <HBox spacing="30" alignment="CENTER_LEFT" styleClass="detail-hero">
+                    <StackPane minWidth="210" prefWidth="210" maxWidth="210" minHeight="210" prefHeight="210" maxHeight="210" styleClass="detail-cover">
+                        <Label text="♫" styleClass="cover-fallback"/>
+                        <ImageView fx:id="coverImage" fitWidth="210" fitHeight="210" preserveRatio="false"/>
                     </StackPane>
-                    <HBox fx:id="videoControls" spacing="12" alignment="CENTER_LEFT" styleClass="video-controls" disable="true">
-                        <Button fx:id="videoPlayButton" text="▶" onAction="#handleVideoPlayPause" styleClass="video-play-button"/>
-                        <Label fx:id="videoCurrentTime" text="0:00" styleClass="video-time"/>
-                        <Slider fx:id="videoSlider" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="video-slider"/>
-                        <Label fx:id="videoTotalTime" text="0:00" styleClass="video-time"/>
-                    </HBox>
-                </VBox>
-            </StackPane>
-            <Label fx:id="statusLabel" wrapText="true" styleClass="detail-muted"/>
-        </VBox>
-    </content>
-</ScrollPane>
+                    <VBox spacing="14" HBox.hgrow="ALWAYS" minWidth="0">
+                        <Label text="SONG DETAIL" styleClass="detail-eyebrow"/>
+                        <VBox spacing="3">
+                            <Label fx:id="titleLabel" text="Song detail" wrapText="true" styleClass="detail-title"/>
+                            <Label fx:id="artistLabel" text="Unknown artist" wrapText="true" styleClass="detail-artist-link"/>
+                        </VBox>
+                        <FlowPane hgap="28" vgap="12" styleClass="detail-metadata">
+                            <VBox spacing="6">
+                                <Label text="COMPOSER" styleClass="meta-key"/>
+                                <Label fx:id="composerLabel" text="—" wrapText="true" maxWidth="180" styleClass="meta-value"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="DURATION" styleClass="meta-key"/>
+                                <Label fx:id="durationLabel" text="—" styleClass="meta-value"/>
+                            </VBox>
+                        </FlowPane>
+                        <FlowPane hgap="8" vgap="8">
+                            <Button fx:id="playButton" text="▶  Play song" styleClass="detail-primary"/>
+                            <Button fx:id="playlistButton" text="＋  Add to playlist" styleClass="detail-secondary"/>
+                            <Button fx:id="favoriteButton" text="♡" accessibleText="Add to favorites" styleClass="detail-secondary, detail-heart"/>
+                        </FlowPane>
+                    </VBox>
+                </HBox>
+                <HBox spacing="24" styleClass="detail-tabs">
+                    <ToggleButton fx:id="lyricsTab" text="Lyrics" styleClass="detail-tab"/>
+                    <ToggleButton fx:id="videoTab" text="Xem Video" styleClass="detail-tab"/>
+                </HBox>
+                <StackPane>
+                    <VBox fx:id="lyricsPane" visible="false" managed="false" spacing="16" styleClass="detail-card">
+                        <Label text="LYRICS" styleClass="detail-eyebrow"/>
+                        <VBox alignment="CENTER" spacing="24" minHeight="230" styleClass="karaoke-panel">
+                            <Label fx:id="lyricsLabel" text="Chưa có lời bài hát cho bài hát này." wrapText="true" maxWidth="Infinity" alignment="CENTER" styleClass="karaoke-current"/>
+                            <VBox fx:id="nextLyricBox" alignment="CENTER" spacing="8" visible="false" managed="false">
+                                <Label text="TIẾP THEO" styleClass="karaoke-caption"/>
+                                <Label fx:id="nextLyricsLabel" wrapText="true" maxWidth="Infinity" alignment="CENTER" styleClass="karaoke-next"/>
+                            </VBox>
+                        </VBox>
+                    </VBox>
+                    <VBox fx:id="videoPane" visible="false" managed="false" spacing="16" styleClass="detail-card">
+                        <Label text="XEM VIDEO" styleClass="detail-eyebrow"/>
+                        <Label text="Music video" styleClass="card-title"/>
+                        <!-- Khung video 16:9; MediaView được controller thêm vào -->
+                        <StackPane fx:id="videoContainer" styleClass="video-container" minHeight="200" prefHeight="360">
+                            <Label fx:id="videoStatusLabel" text="Bấm ▶ để tải và phát video" wrapText="true" styleClass="video-status"/>
+                        </StackPane>
+                        <HBox fx:id="videoControls" spacing="12" alignment="CENTER_LEFT" styleClass="video-controls">
+                            <Button fx:id="videoPlayButton" text="▶" onAction="#handleVideoPlayPause" styleClass="video-play-button"/>
+                            <Label fx:id="videoCurrentTime" text="0:00" styleClass="video-time"/>
+                            <Slider fx:id="videoSlider" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="video-slider"/>
+                            <Label fx:id="videoTotalTime" text="0:00" styleClass="video-time"/>
+                        </HBox>
+                    </VBox>
+                </StackPane>
+                <Label fx:id="statusLabel" wrapText="true" styleClass="detail-muted"/>
+            </VBox>
+        </content>
+    </ScrollPane>
+    <StackPane fx:id="loadingOverlay" visible="false" managed="false" style="-fx-background-color: rgba(0, 0, 0, 0.35);">
+        <ProgressIndicator maxWidth="48.0" maxHeight="48.0"/>
+    </StackPane>
+</StackPane>

@@ -18,12 +18,24 @@ import java.util.prefs.Preferences;
 public class PlayerManager {
     private static PlayerManager instance;
     private MediaPlayer mediaPlayer;
+    private final javafx.beans.property.ReadOnlyDoubleWrapper playbackSeconds = new javafx.beans.property.ReadOnlyDoubleWrapper(
+            -1);
+
+    public javafx.beans.property.ReadOnlyDoubleProperty playbackSecondsProperty() {
+        return playbackSeconds.getReadOnlyProperty();
+    }
+
+    public SongData getCurrentSong() {
+        return currentSong;
+    }
+
     private final List<SongData> currentSongList = new ArrayList<>();
     private int currentSongIndex = -1;
     private SongData currentSong;
     private Boolean isPlaying = false;
     private PlayerListener listener;
-    // Gọi ngay trước khi nhạc bắt đầu phát (vd: để dừng video đang xem ở Song detail)
+    // Gọi ngay trước khi nhạc bắt đầu phát (vd: để dừng video đang xem ở Song
+    // detail)
     private Runnable onAudioStart;
 
     // Âm lượng 0.0 - 1.0, giữ nguyên khi đổi bài và được nhớ giữa các lần mở app
@@ -130,6 +142,7 @@ public class PlayerManager {
                 if (!response.isSuccess()) {
                     Platform.runLater(() -> {
                         if (listener != null) {
+                            listener.onLoadingChanged(false);
                             listener.onPlayerError(response.getMessage());
                         }
                         return;
@@ -152,6 +165,7 @@ public class PlayerManager {
             mediaPlayer.dispose();
         }
         currentSong = song;
+        playbackSeconds.set(-1);
         String audioUrl = song.audio_url();
         if (audioUrl == null || audioUrl.isBlank()) {
             audioUrl = song.preview_url();
@@ -165,9 +179,13 @@ public class PlayerManager {
         try {
             Media media = new Media(audioUrl);
             mediaPlayer = new MediaPlayer(media);
+            MediaPlayer activePlayer = mediaPlayer;
             applyVolume(); // bài mới dùng lại âm lượng hiện tại
             mediaPlayer.currentTimeProperty().addListener((observable, oldTime, newTime) -> {
 
+                if (activePlayer != mediaPlayer)
+                    return;
+                playbackSeconds.set(newTime.toSeconds());
                 if (listener == null) {
                     return;
                 }
@@ -295,6 +313,7 @@ public class PlayerManager {
                 * percent
                 / 100.0;
 
+        playbackSeconds.set(seekSeconds);
         mediaPlayer.seek(
                 javafx.util.Duration.seconds(
                         seekSeconds));

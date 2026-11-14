@@ -24,12 +24,25 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 
 import java.io.IOException;
 import java.util.List;
 
 public class ArtistsController {
+    @FXML
+    private StackPane loadingOverlay;
+
+    private void setLoading(boolean loading) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> setLoading(loading));
+            return;
+        }
+        loadingOverlay.setVisible(loading);
+        loadingOverlay.setManaged(loading);
+    }
+
 
     private static final double PHOTO_WIDTH = 140;
     private static final double PHOTO_HEIGHT = 150;
@@ -67,17 +80,28 @@ public class ArtistsController {
         Request request = Request.of(
                 Action.SEARCH_ARTIST,
                 payload);
+        if (loadingOverlay.isVisible()) {
+            return;
+        }
+        setLoading(true);
         try {
-            ClientConnection.getInstance().send(request, response -> {
-                if (!response.isSuccess()) {
-                    Platform.runLater(() -> showMessage("Lỗi server khi tìm kiếm dữ liệu!"));
-                    return;
+            ClientConnection.getInstance().send(request, response -> Platform.runLater(() -> {
+                try {
+                    if (!response.isSuccess()) {
+                        showMessage("Lỗi server khi tìm kiếm dữ liệu!");
+                        return;
+                    }
+                    SearchArtistData data = response.dataAs(SearchArtistData.class);
+                    List<ArtistData> artists = (data == null || data.artists() == null) ? List.of() : data.artists();
+                    renderArtists(artists);
+                } catch (Exception e) {
+                    showMessage("Không thể tải kết quả: " + e.getMessage());
+                } finally {
+                    setLoading(false);
                 }
-                SearchArtistData data = response.dataAs(SearchArtistData.class);
-                List<ArtistData> artistList = (data == null || data.artists() == null) ? List.of() : data.artists();
-                Platform.runLater(() -> renderArtists(artistList));
-            });
+            }));
         } catch (Exception e) {
+            setLoading(false);
             showMessage("Không thể kết nối server: " + e.getMessage());
         }
     }
