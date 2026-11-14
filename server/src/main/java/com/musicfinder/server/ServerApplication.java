@@ -3,8 +3,10 @@ package com.musicfinder.server;
 import com.musicfinder.server.handler.RequestDispatcher;
 import com.musicfinder.server.network.TcpServer;
 import com.musicfinder.server.repository.SearchCacheRepository;
+import com.musicfinder.shared.crypto.CryptoUtil;
 import com.musicfinder.server.network.AudioStreamServer;
 
+import java.security.PrivateKey;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +20,16 @@ public class ServerApplication {
     private static final int MAX_POOL_SIZE = 50;
 
     public static void main(String[] args) {
+        String keyFile = System.getProperty("music.private.key", "keys/server_private.key");
+        PrivateKey privateKey;
+        try {
+            privateKey = CryptoUtil.loadPrivate(keyFile);
+            System.out.println("Đã nạp private key: " + keyFile);
+        } catch (Exception e) {
+            System.err.println("Không nạp được private key: " + e.getMessage());
+            return;
+        }
+
         // Lần đầu tự tải công cụ trên Windows; lỗi tải vẫn cho phép tra cứu.
         YtDlpApi.prepareAudioTools();
         AudioStreamServer audioServer = new AudioStreamServer();
@@ -42,7 +54,7 @@ public class ServerApplication {
                 System.out.println("Dọn cache lỗi: " + e.getMessage());
             }
         }, 6, 6, TimeUnit.HOURS);
-        TcpServer server = new TcpServer(PORT, dispatcher, CORE_POOL_SIZE, MAX_POOL_SIZE);
+        TcpServer server = new TcpServer(PORT, dispatcher, privateKey, CORE_POOL_SIZE, MAX_POOL_SIZE);
 
         // Nhấn Ctrl+C thì dừng server gọn gàng
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

@@ -29,3 +29,8 @@ graphify-out/
 
 # File audio tải trên server
 storage/
+
+keys/
+attacker/
+*.key
+!client/src/main/resources/server_public.key
