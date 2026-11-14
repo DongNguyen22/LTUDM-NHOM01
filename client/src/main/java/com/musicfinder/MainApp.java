@@ -15,7 +15,7 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
-        String host = System.getProperty("music.server.host", "localhost");
+        String host = System.getProperty("music.server.host", "20.212.10.15");
         int port = Integer.getInteger("music.server.port", 12345);
         try {
             ClientConnection.getInstance().connect(host, port);
