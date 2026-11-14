@@ -2,19 +2,11 @@ package com.musicfinder.controller;
 
 import com.musicfinder.network.ClientConnection;
 import com.musicfinder.shared.enums.Action;
-import com.musicfinder.shared.enums.PlayList_Type;
 import com.musicfinder.shared.request.Request;
-import com.musicfinder.shared.request.payload.Add_RemoveToPlaylistPayload;
 import com.musicfinder.shared.request.payload.Add_To_PlaylistPayload;
-import com.musicfinder.shared.response.Response;
 import com.musicfinder.shared.response.payload.PlayListData;
 import com.musicfinder.shared.response.payload.SongData;
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -43,7 +35,6 @@ public final class AddSongToPlaylistDialog {
 
     private final Window owner;
     private final SongData song;
-    private final Runnable onSuccess;
     private final Dialog<ButtonType> dialog = new Dialog<>();
     private final ButtonType addType = new ButtonType(
             "Add to playlist", ButtonBar.ButtonData.OK_DONE);
@@ -54,15 +45,15 @@ public final class AddSongToPlaylistDialog {
     private List<PlayListData> originalList = new ArrayList<>();
     private List<PlayListData> filterList = new ArrayList<>();
     private final Set<PlayListData> selectedPlaylists = new LinkedHashSet<>();
+    private boolean submitting = false;
 
-    private AddSongToPlaylistDialog(Window owner, SongData song, Runnable onSuccess) {
+    private AddSongToPlaylistDialog(Window owner, SongData song) {
         this.owner = Objects.requireNonNull(owner, "owner is required");
         this.song = Objects.requireNonNull(song, "song is required");
-        this.onSuccess = onSuccess;
     }
 
-    public static void show(Window owner, SongData song, Runnable onSuccess) {
-        new AddSongToPlaylistDialog(owner, song, onSuccess).open();
+    public static void show(Window owner, SongData song) {
+        new AddSongToPlaylistDialog(owner, song).open();
     }
 
     private void open() {
@@ -98,6 +89,8 @@ public final class AddSongToPlaylistDialog {
         addButton = (Button) pane.lookupButton(addType);
         addButton.setDisable(true);
         addButton.addEventFilter(ActionEvent.ACTION, event -> {
+            // Giữ dialog mở cho tới khi server phản hồi
+            event.consume();
             handleAddSongToPlaylist(song);
         });
 
@@ -227,8 +220,12 @@ public final class AddSongToPlaylistDialog {
 
     private void renderPlaylists(List<PlayListData> playlists) {
         playlistList.getChildren().clear();
-        if (playlists == null || playlists.isEmpty()) {
+        if (originalList.isEmpty()) {
             statusLabel.setText("You don't have any playlists yet.");
+            return;
+        }
+        if (playlists == null || playlists.isEmpty()) {
+            statusLabel.setText("No playlists match.");
             return;
         }
         for (PlayListData playlist : playlists) {
@@ -253,26 +250,53 @@ public final class AddSongToPlaylistDialog {
     }
 
     private void handleAddSongToPlaylist(SongData song) {
+        if (submitting || selectedPlaylists.isEmpty()) {
+            return;
+        }
         List<Long> addPlaylists = new ArrayList<>();
         for (PlayListData playlist : selectedPlaylists) {
-            addPlaylists.add(playlist.playlistID());
+            if (playlist.playlistID() != null) {
+                addPlaylists.add(playlist.playlistID());
+            }
         }
+        if (addPlaylists.isEmpty()) {
+            statusLabel.setText("Please select at least one playlist.");
+            return;
+        }
+
+        setSubmitting(true);
         Add_To_PlaylistPayload payload = new Add_To_PlaylistPayload(addPlaylists, song);
         Request request = Request.of(Action.ADD_TO_PLAYLIST, payload);
         try {
-            ClientConnection.getInstance().send(request, response -> {
-                Platform.runLater(() -> {
-                    if (!response.isSuccess()) {
-                        StatusDialog.error(owner, response.getMessage());
-                        return;
-                    }
-                    StatusDialog.success(owner, response.getMessage());
+            ClientConnection.getInstance().send(request, response -> Platform.runLater(() -> {
+                setSubmitting(false);
+                if (response == null || !response.isSuccess()) {
+                    String message = response == null
+                            ? "No response from server"
+                            : response.getMessage();
+                    statusLabel.setText("Cannot add song: " + message);
+                    StatusDialog.error(owner, message);
                     return;
-                });
-            });
-        } catch (Exception e) {
-            // TODO: handle exception
-            StatusDialog.error(owner, e.getMessage());
+                }
+                dialog.setResult(addType);
+                dialog.close();
+                StatusDialog.success(owner, response.getMessage());
+            }));
+        } catch (IOException e) {
+            setSubmitting(false);
+            statusLabel.setText("Connection error: " + e.getMessage());
+            StatusDialog.error(owner, "Connection error: " + e.getMessage());
+        }
+    }
+
+    private void setSubmitting(boolean value) {
+        submitting = value;
+        addButton.setDisable(value || selectedPlaylists.isEmpty());
+        addButton.setText(value ? "Adding..." : "Add to playlist");
+        searchField.setDisable(value);
+        playlistList.setDisable(value);
+        if (value) {
+            statusLabel.setText("Adding song to " + selectedPlaylists.size() + " playlist(s)...");
         }
     }
 

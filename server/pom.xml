@@ -14,22 +14,36 @@
     <artifactId>server</artifactId>
     <name>Music Finder - Server</name>
 
-<!--Cấu hình file thực thi chính của server hiệp thêm-->
+    <!--Cấu hình file thực thi chính của server hiệp thêm-->
     <build>
-    <plugins>
-        <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>3.6.4</version>
-            <configuration>
-                <!-- Điền đường dẫn đầy đủ đến class chứa hàm main -->
-                <mainClass>com.musicfinder.server.ServerApplication</mainClass>
-            </configuration>
-        </plugin>
-    </plugins>
-</build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.4</version>
+                <configuration>
+                    <!-- Điền đường dẫn đầy đủ đến class chứa hàm main -->
+                    <mainClass>com.musicfinder.server.ServerApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
+
+        <!-- Spring Email (JavaMailSender) - dùng được khi không có Spring Boot -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>6.2.10</version>
+        </dependency>
+        <!-- Bản cài đặt Jakarta Mail mà Spring 6 cần -->
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <version>2.0.3</version>
+        </dependency>
+
         <!-- Bcrypt -->
         <dependency>
             <groupId>org.mindrot</groupId>
@@ -99,7 +113,7 @@
             <scope>test</scope>
         </dependency>
 
-            <!-- Gọi API bằng Jsoup -->
+        <!-- Gọi API bằng Jsoup -->
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>

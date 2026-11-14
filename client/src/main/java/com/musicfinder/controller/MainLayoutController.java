@@ -206,8 +206,9 @@ public class MainLayoutController implements PlayerListener {
 
         Parent content = loader.load();
         Object controller = loader.getController();
-        if (controller instanceof SearchController) {
-            searchController = (SearchController) controller;
+        if (controller instanceof ForgotPasswordController) {
+
+            SearchController searchController = (SearchController) controller;
             searchController.setMainLayoutController(this);
         }
         contentContainer.getChildren().setAll(content);
@@ -215,7 +216,8 @@ public class MainLayoutController implements PlayerListener {
         currentPageLabel.setText(screen.getHeaderTitle());
         setActiveNavigation(screen);
     }
-    public void show(Screen screen,Consumer onReady) throws IOException {
+
+    public void show(Screen screen, Consumer onReady) throws IOException {
         if (screen.isLogin()) {
             throw new IllegalArgumentException("Login is not content of the main layout.");
         }
@@ -225,9 +227,13 @@ public class MainLayoutController implements PlayerListener {
 
         Parent content = loader.load();
         Object controller = loader.getController();
-        if (controller instanceof SearchController) {
-            searchController = (SearchController) controller;
+        if (controller instanceof ForgotPasswordController) {
+
+            SearchController searchController = (SearchController) controller;
             searchController.setMainLayoutController(this);
+        } else if (controller instanceof ForgotPasswordController) {
+            ForgotPasswordController forgotController = (ForgotPasswordController) controller;
+            forgotController.setListener(this);
         }
         contentContainer.getChildren().setAll(content);
 

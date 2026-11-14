@@ -1,10 +1,18 @@
 package com.musicfinder.controller;
 
+import java.io.IOException;
+import java.util.List;
+
+import com.musicfinder.navigation.Navigator;
+import com.musicfinder.navigation.Screen;
 import com.musicfinder.network.ClientConnection;
 import com.musicfinder.player.PlayerManager;
 import com.musicfinder.shared.enums.Action;
+import com.musicfinder.shared.enums.PlayList_Type;
 import com.musicfinder.shared.request.Request;
+import com.musicfinder.shared.request.payload.Add_RemoveToPlaylistPayload;
 import com.musicfinder.shared.request.payload.SongPayload;
+import com.musicfinder.shared.response.payload.LyricData;
 import com.musicfinder.shared.response.payload.SongData;
 import com.musicfinder.shared.response.payload.VideoData;
 
@@ -22,12 +30,18 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 public class SongDetailController {
+    @FXML
+    private StackPane loadingOverlay;
 
     private static final Duration VIDEO_POLL_DELAY = Duration.seconds(2);
     private static final int VIDEO_MAX_POLLS = 90; // ~3 phút chờ server tải video
 
     @FXML
     private Label titleLabel, composerLabel, durationLabel, artistLabel, statusLabel;
+    @FXML
+    private Button playButton;
+    @FXML
+    private Button playlistButton;
     @FXML
     private Button favoriteButton;
     @FXML
@@ -36,6 +50,9 @@ public class SongDetailController {
     private ToggleButton lyricsTab, videoTab;
     @FXML
     private VBox lyricsPane, videoPane;
+
+    @FXML
+    private Button backToSearch;
 
     // Video
     @FXML
@@ -49,18 +66,32 @@ public class SongDetailController {
     @FXML
     private Slider videoSlider;
 
+    @FXML
+    private Label lyricsLabel;
+    @FXML
+    private Label nextLyricsLabel;
+    @FXML
+    private VBox nextLyricBox;
+    private com.musicfinder.player.LrcLyrics lyrics;
+    private boolean lyricLoading;
+    private boolean videoClockActive;
+    private final javafx.beans.value.ChangeListener<Number> lyricProgressListener = (obs, oldTime,
+            newTime) -> updateLyrics();
+
     private SongData song;
 
     private final MediaView mediaView = new MediaView();
     private MediaPlayer videoPlayer;
     private PauseTransition pollTimer;
     private int pollCount;
-    private boolean videoRequested; // đã bắt đầu tải video chưa (chỉ tải khi mở tab lần đầu)
-    private boolean triedServer; // đã hỏi server GET_VIDEO chưa (tránh lặp vô hạn khi lỗi)
+    private boolean videoRequested;
     private boolean userSeeking;
     private boolean disposed;
-    // Nhạc bắt đầu phát -> tạm dừng video (giữ tham chiếu để gỡ đúng hook khi rời màn hình)
-    private final Runnable pauseVideoOnAudio = this::pauseVideo;
+    private final Runnable pauseVideoOnAudio = () -> {
+        videoClockActive = false;
+        pauseVideo();
+        updateLyrics();
+    };
 
     @FXML
     private void initialize() {
@@ -68,7 +99,7 @@ public class SongDetailController {
         lyricsTab.setToggleGroup(tabs);
         videoTab.setToggleGroup(tabs);
         tabs.selectedToggleProperty().addListener((obs, oldTab, newTab) -> {
-            // Không cho bỏ chọn hết tab
+
             if (newTab == null) {
                 oldTab.setSelected(true);
                 return;
@@ -85,16 +116,42 @@ public class SongDetailController {
         coverImage.setPreserveRatio(false);
 
         setupVideoView();
+        PlayerManager.getInstance().playbackSecondsProperty().addListener(lyricProgressListener);
 
-        // Rời màn hình (content bị thay) -> dừng và giải phóng video
         videoPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
             if (newScene == null) {
                 disposeVideo();
             }
         });
 
+        lyricsPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null)
+                updateLyrics();
+        });
         lyricsTab.setSelected(true);
         PlayerManager.getInstance().setOnAudioStart(pauseVideoOnAudio);
+        playButton.setOnAction(event -> {
+            if (disposed || song == null)
+                return;
+            pauseVideo();
+            videoClockActive = false;
+            lyricsTab.setSelected(true);
+            getLyric();
+            PlayerManager.getInstance().playSong(List.of(song), song);
+        });
+        favoriteButton.setOnAction(event -> {
+            handlleAddToFavorite(song);
+        });
+        backToSearch.setOnAction(event -> {
+            try {
+                Navigator.goTo(Screen.SEARCH);
+            } catch (IOException e) {
+                StatusDialog.error(playButton.getScene().getWindow(), "Lỗi chuyển màn hình!");
+            }
+        });
+        playlistButton.setOnAction(event -> {
+            handleAddToPlaylist(song);
+        });
     }
 
     public void init(SongData song) {
@@ -106,7 +163,8 @@ public class SongDetailController {
                 : String.join(", ", song.artistNames());
         artistLabel.setText(artists);
 
-        composerLabel.setText(song.composerList() == null || song.composerList().isBlank() ? "—" : song.composerList());
+        composerLabel.setText(song.artistNames() == null || song.artistNames().isEmpty() ? "—"
+                : String.join(", ", song.artistNames()));
 
         Integer seconds = song.durations_seconds();
         durationLabel.setText(seconds == null ? "—"
@@ -121,11 +179,7 @@ public class SongDetailController {
                 statusLabel.setText("Không thể tải ảnh bìa.");
             }
         }
-
-        // Nếu người dùng đã mở tab video trước khi init chạy
-        if (videoTab.isSelected()) {
-            startVideo();
-        }
+        showLyricFrame("Bấm Play song để phát nhạc và xem lời đồng bộ.", "");
     }
 
     // ===================== Tabs =====================
@@ -138,26 +192,30 @@ public class SongDetailController {
 
         if (video) {
             startVideo();
-        } else if (videoPlayer != null) {
-            videoPlayer.pause(); // rời tab video -> tạm dừng
+        } else {
+            updateLyrics();
         }
     }
 
     // ===================== Video: lấy link =====================
 
     private void startVideo() {
-        if (song == null || videoRequested) {
+        if (disposed || song == null)
+            return;
+        if (videoPlayer != null) {
+            if (videoPlayer.getStatus() == MediaPlayer.Status.PAUSED) {
+                videoClockActive = true;
+                PlayerManager.getInstance().pause();
+                videoPlayer.play();
+            }
             return;
         }
+        if (videoRequested)
+            return;
         videoRequested = true;
 
-        // 1. Ưu tiên link đã lưu sẵn trong SongData.video_url
-        String savedUrl = song.video_url();
-        if (savedUrl != null && !savedUrl.isBlank()) {
-            playVideo(savedUrl);
-            return;
-        }
-        // 2. Chưa có -> nhờ server chuẩn bị video
+        pollCount = 0;
+        // URL lưu trước đó có thể trỏ tới cache đã hết hạn; luôn kiểm tra server.
         requestVideoFromServer();
     }
 
@@ -165,9 +223,8 @@ public class SongDetailController {
         if (disposed) {
             return;
         }
-        triedServer = true;
         if (song.songID() == null && (song.externalId() == null || song.externalId().isBlank())) {
-            showVideoStatus("Bài hát này chưa có video.");
+            onVideoFailed("Bài hát này chưa có video.");
             return;
         }
         if (pollCount == 0) {
@@ -181,18 +238,25 @@ public class SongDetailController {
                     return;
                 }
                 if (!response.isSuccess()) {
-                    showVideoStatus(textOr(response.getMessage(), "Không lấy được video."));
+                    onVideoFailed(textOr(response.getMessage(), "Không lấy được video."));
                     return;
                 }
-                VideoData data = response.dataAs(VideoData.class);
-                if (data != null && "READY".equalsIgnoreCase(data.state()) && data.play_url() != null) {
-                    playVideo(data.play_url());
-                } else {
-                    scheduleNextPoll();
+                try {
+                    VideoData data = response.dataAs(VideoData.class);
+                    if (data != null && "READY".equalsIgnoreCase(data.state())
+                            && data.play_url() != null && !data.play_url().isBlank()) {
+                        playVideo(data.play_url());
+                    } else if (data != null && "PROCESSING".equalsIgnoreCase(data.state())) {
+                        scheduleNextPoll();
+                    } else {
+                        onVideoFailed("Server trả về dữ liệu video không hợp lệ.");
+                    }
+                } catch (Exception e) {
+                    onVideoFailed("Không thể mở video: " + e.getMessage());
                 }
             }));
         } catch (Exception e) {
-            showVideoStatus("Không thể kết nối server: " + e.getMessage());
+            onVideoFailed("Không thể kết nối server: " + e.getMessage());
         }
     }
 
@@ -200,7 +264,7 @@ public class SongDetailController {
     private void scheduleNextPoll() {
         pollCount++;
         if (pollCount > VIDEO_MAX_POLLS) {
-            showVideoStatus("Video mất quá nhiều thời gian để chuẩn bị. Vui lòng thử lại sau.");
+            onVideoFailed("Video mất quá nhiều thời gian để chuẩn bị. Vui lòng thử lại sau.");
             return;
         }
         showVideoStatus("Server đang tải video, vui lòng chờ... (" + pollCount * 2 + "s)");
@@ -212,10 +276,13 @@ public class SongDetailController {
     // ===================== Video: phát =====================
 
     private void playVideo(String url) {
+        System.out.println("VIDEO URL: " + url);
         disposePlayerOnly();
         showVideoStatus("Đang tải video...");
-        // Dùng biến cục bộ "player" trong mọi listener: MediaPlayer vẫn bắn sự kiện (currentTime, status...)
-        // một lúc sau khi stop()/dispose(), lúc đó field videoPlayer đã là null hoặc đã là player khác.
+        // Dùng biến cục bộ "player" trong mọi listener: MediaPlayer vẫn bắn sự kiện
+        // (currentTime, status...)
+        // một lúc sau khi stop()/dispose(), lúc đó field videoPlayer đã là null hoặc đã
+        // là player khác.
         MediaPlayer player;
         try {
             Media media = new Media(url);
@@ -234,7 +301,9 @@ public class SongDetailController {
             videoStatusLabel.setVisible(false);
             mediaView.setVisible(true);
             videoControls.setDisable(false);
+            videoSlider.setDisable(false);
             videoTotalTime.setText(formatTime(player.getTotalDuration()));
+            videoClockActive = true;
             PlayerManager.getInstance().pause(); // dừng nhạc nền khi xem video
             playWhenBuffered(player);
         });
@@ -248,6 +317,7 @@ public class SongDetailController {
                 return;
             }
             videoCurrentTime.setText(formatTime(newT));
+            updateLyrics();
             Duration total = player.getTotalDuration();
             if (!userSeeking && total != null && total.toMillis() > 0) {
                 videoSlider.setValue(newT.toMillis() / total.toMillis() * 100);
@@ -264,10 +334,14 @@ public class SongDetailController {
                 onVideoFailed("Không phát được video: "
                         + (player.getError() == null ? "" : player.getError().getMessage()));
             }
+            if (player.getError() != null) {
+                player.getError().printStackTrace();
+            }
         });
     }
 
-    // Chờ đệm trước ~2s (hoặc tối đa 1.5s) rồi mới play, tránh giật ở vài giây đầu khi mở lần đầu
+    // Chờ đệm trước ~2s (hoặc tối đa 1.5s) rồi mới play, tránh giật ở vài giây đầu
+    // khi mở lần đầu
     private void playWhenBuffered(MediaPlayer player) {
         Duration total = player.getTotalDuration();
         Duration target = Duration.seconds(2);
@@ -296,25 +370,30 @@ public class SongDetailController {
         fallback.play();
     }
 
-    // Link lưu trong video_url có thể đã hết hạn / file bị xoá -> hỏi lại server một lần
     private void onVideoFailed(String message) {
-        disposePlayerOnly();
-        if (!triedServer) {
-            pollCount = 0;
-            requestVideoFromServer();
-        } else {
-            showVideoStatus(message);
+        if (disposed)
+            return;
+        if (pollTimer != null) {
+            pollTimer.stop();
+            pollTimer = null;
         }
+        disposePlayerOnly();
+        videoRequested = false;
+        videoClockActive = false;
+        pollCount = 0;
+        showVideoStatus(message + " Bấm ▶ để thử lại.");
     }
 
     @FXML
     private void handleVideoPlayPause() {
         if (videoPlayer == null) {
+            startVideo();
             return;
         }
         if (videoPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
             videoPlayer.pause();
         } else {
+            videoClockActive = true;
             PlayerManager.getInstance().pause();
             videoPlayer.play();
         }
@@ -327,7 +406,8 @@ public class SongDetailController {
         mediaView.fitWidthProperty().bind(videoContainer.widthProperty());
         mediaView.fitHeightProperty().bind(videoContainer.heightProperty());
         videoContainer.getChildren().add(0, mediaView);
-        // Không để kích thước video "đẩy" khung to ra (tránh khung chỉ to mà không co lại khi thu nhỏ cửa sổ);
+        // Không để kích thước video "đẩy" khung to ra (tránh khung chỉ to mà không co
+        // lại khi thu nhỏ cửa sổ);
         // VBox cha sẽ kéo khung rộng hết chiều ngang
         videoContainer.setMinWidth(0);
         videoContainer.setPrefWidth(0);
@@ -346,6 +426,7 @@ public class SongDetailController {
         // Click vào video để play/pause
         videoContainer.setOnMouseClicked(e -> handleVideoPlayPause());
 
+        videoSlider.setDisable(true);
         videoSlider.setMin(0);
         videoSlider.setMax(100);
         videoSlider.setOnMousePressed(e -> userSeeking = true);
@@ -376,7 +457,7 @@ public class SongDetailController {
         }
         mediaView.setMediaPlayer(null);
         mediaView.setVisible(false);
-        videoControls.setDisable(true);
+        videoSlider.setDisable(true);
         videoSlider.setValue(0);
         videoCurrentTime.setText("0:00");
         videoTotalTime.setText("0:00");
@@ -390,6 +471,7 @@ public class SongDetailController {
 
     private void disposeVideo() {
         disposed = true;
+        PlayerManager.getInstance().playbackSecondsProperty().removeListener(lyricProgressListener);
         PlayerManager.getInstance().clearOnAudioStart(pauseVideoOnAudio);
         if (pollTimer != null) {
             pollTimer.stop();
@@ -414,5 +496,107 @@ public class SongDetailController {
 
     private String textOr(String value, String fallback) {
         return (value == null || value.isBlank()) ? fallback : value;
+    }
+
+    private void updateLyrics() {
+        if (disposed || lyricLoading || lyrics == null
+                || !lyricsTab.isSelected() || lyricsLabel.getScene() == null || song == null)
+            return;
+        PlayerManager manager = PlayerManager.getInstance();
+        double seconds;
+        if (videoClockActive && videoPlayer != null) {
+            seconds = videoPlayer.getCurrentTime().toSeconds();
+        } else {
+            SongData playing = manager.getCurrentSong();
+            boolean sameSong = playing != null && ((song.songID() != null && song.songID().equals(playing.songID()))
+                    || (song.externalId() != null && !song.externalId().isBlank()
+                            && song.externalId().equals(playing.externalId())));
+            if (!sameSong || manager.playbackSecondsProperty().get() < 0) {
+                showLyricFrame("Phát bài hát này để xem lời đồng bộ.", "");
+                return;
+            }
+            seconds = manager.playbackSecondsProperty().get();
+        }
+        if (lyrics != null) {
+            var frame = lyrics.frameAt(seconds);
+            showLyricFrame(frame.current(), frame.next());
+        }
+    }
+
+    private void showLyricFrame(String current, String next) {
+        if (!current.equals(lyricsLabel.getText()))
+            lyricsLabel.setText(current);
+        if (!next.equals(nextLyricsLabel.getText()))
+            nextLyricsLabel.setText(next);
+        boolean hasNext = !next.isBlank();
+        nextLyricBox.setVisible(hasNext);
+        nextLyricBox.setManaged(hasNext);
+    }
+
+    private void getLyric() {
+        if (disposed || song == null || lyricLoading)
+            return;
+        if (lyrics != null) {
+            updateLyrics();
+            return;
+        }
+        lyricLoading = true;
+        showLyricFrame("Đang tải lời bài hát...", "");
+        SongPayload payload = new SongPayload(song.songID(), song.externalId());
+        Request request = Request.of(Action.GET_LYRIC, payload);
+        try {
+            ClientConnection.getInstance().send(request, response -> Platform.runLater(() -> {
+                lyricLoading = false;
+                if (disposed)
+                    return;
+                try {
+                    if (!response.isSuccess()) {
+                        showLyricFrame(textOr(response.getMessage(), "Chưa có lời bài hát."), "");
+                        return;
+                    }
+                    LyricData data = response.dataAs(LyricData.class);
+                    if (data == null || !data.hasLyric() || data.text() == null || data.text().isBlank()) {
+                        showLyricFrame("Chưa có lời bài hát.", "");
+                        return;
+                    }
+                    lyrics = new com.musicfinder.player.LrcLyrics(data.text());
+                    updateLyrics();
+                } catch (Exception e) {
+                    showLyricFrame("Không thể đọc lời bài hát.", "");
+                }
+            }));
+        } catch (Exception e) {
+            lyricLoading = false;
+            showLyricFrame("Không thể tải lời bài hát: " + e.getMessage(), "");
+        }
+    }
+
+    private void handlleAddToFavorite(SongData song) {
+        Add_RemoveToPlaylistPayload payload = new Add_RemoveToPlaylistPayload(null, song, PlayList_Type.FAVORITES);
+        Request request = Request.of(Action.ADD_FAVORITE, payload);
+        try {
+            ClientConnection.getInstance().send(request, response -> {
+                Platform.runLater(() -> {
+                    if (!response.isSuccess()) {
+                        StatusDialog.error(playButton.getScene().getWindow(), response.getMessage());
+                        return;
+                    }
+                    StatusDialog.success(playButton.getScene().getWindow(), response.getMessage());
+                });
+            });
+        } catch (Exception e) {
+            // TODO: handle exception
+            Platform.runLater(() -> {
+                StatusDialog.error(playButton.getScene().getWindow(), e.getMessage());
+                return;
+            });
+        }
+    }
+
+    private void handleAddToPlaylist(SongData song) {
+        if (song == null || lyricsLabel.getScene() == null) {
+            return;
+        }
+        AddSongToPlaylistDialog.show(lyricsLabel.getScene().getWindow(), song);
     }
 }

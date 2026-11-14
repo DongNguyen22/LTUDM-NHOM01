@@ -41,7 +41,7 @@ public final class Navigator {
     public static void goTo(Screen screen) throws IOException {
         ensureInitialized();
 
-        if (screen.isLogin() || screen == Screen.REGISTER) {
+        if (screen.isLogin() || screen == Screen.REGISTER || screen == Screen.FORGOT_PASSWORD) {
             showLogin(screen);
             return;
         }

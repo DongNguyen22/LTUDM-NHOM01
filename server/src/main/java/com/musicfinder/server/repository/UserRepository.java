@@ -49,6 +49,24 @@ public class UserRepository {
         }
     }
 
+    // Tìm người dùng theo email
+    public Optional<Users> findByEmail(String email) {
+        String sql = "SELECT * FROM USERS WHERE email = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapResultSetToUser(rs));
+                }
+            }
+            return Optional.empty();
+        } catch (SQLException e) {
+            log.error("Lỗi truy vấn CSDL khi tìm user theo email [{}]: {}", email, e.getMessage(), e);
+            throw new DataException("Lỗi truy vấn CSDL khi tìm user theo email " + email, e);
+        }
+    }
+
     // tim theo email hoac username
 
     public Optional<Users> findByUsernameOrEmail(String usernameOrEmail) {

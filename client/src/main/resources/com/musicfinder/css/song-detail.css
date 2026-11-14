@@ -236,3 +236,32 @@
     -fx-pref-width: 12; -fx-pref-height: 12;
     -fx-padding: 6;
 }
+
+/* Karaoke: current line and upcoming line. */
+.song-detail .karaoke-panel {
+    -fx-padding: 32 24;
+    -fx-background-color: linear-gradient(to bottom right, #302341, #1c1927);
+    -fx-background-radius: 18;
+    -fx-border-color: #c7a1ff30;
+    -fx-border-radius: 18;
+}
+.song-detail .karaoke-current {
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f2dcff;
+    -fx-text-alignment: center;
+    -fx-line-spacing: 8;
+    -fx-effect: dropshadow(gaussian, #b37dff55, 16, 0.15, 0, 2);
+}
+.song-detail .karaoke-next {
+    -fx-font-size: 24px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #bdb3cc;
+    -fx-text-alignment: center;
+    -fx-line-spacing: 6;
+}
+.song-detail .karaoke-caption {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #a38bbf;
+}

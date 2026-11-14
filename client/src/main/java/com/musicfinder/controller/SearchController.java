@@ -24,6 +24,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.shape.SVGPath;
@@ -36,6 +37,23 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class SearchController {
+    @FXML
+    private StackPane loadingOverlay;
+
+    private void setLoading(boolean loading) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> setLoading(loading));
+            return;
+        }
+        loadingOverlay.setVisible(loading);
+        loadingOverlay.setManaged(loading);
+    }
+
+    private MainLayoutController mainLayoutController;
+
+    public void setMainLayoutController(MainLayoutController controller) {
+        this.mainLayoutController = controller;
+    }
 
     @FXML
     private TextField searchField;
@@ -53,21 +71,6 @@ public class SearchController {
     private Label resultSubtitleLabel;
 
     private final List<SongData> currentSongList = new ArrayList<>();
-
-    private MainLayoutController mainLayoutController;
-
-    public void setMainLayoutController(MainLayoutController mainLayoutController) {
-
-        this.mainLayoutController = mainLayoutController;
-    }
-
-    private Consumer<SongData> onPlaySong;
-
-    public void setOnPlaySong(
-            Consumer<SongData> onPlaySong) {
-
-        this.onPlaySong = onPlaySong;
-    }
 
     @FXML
     private void initialize() {
@@ -92,29 +95,38 @@ public class SearchController {
         Request request = Request.of(
                 Action.SEARCH_SONG,
                 payload);
+        if (loadingOverlay.isVisible()) {
+            return;
+        }
+        setLoading(true);
         showMessage("Searching...");
         try {
             ClientConnection.getInstance()
                     .send(request, response -> {
-                        if (!response.isSuccess()) {
-                            Platform.runLater(() -> showMessage(
-                                    response.getMessage()));
-                            return;
-                        }
-                        SearchSongData data = response.dataAs(SearchSongData.class);
                         Platform.runLater(() -> {
-                            currentSongList.clear();
-                            if (data.songs() != null) {
-                                currentSongList.addAll(
-                                        data.songs());
+                            try {
+                                if (!response.isSuccess()) {
+                                    showMessage(response.getMessage());
+                                    return;
+                                }
+                                SearchSongData data = response.dataAs(SearchSongData.class);
+                                currentSongList.clear();
+                                if (data != null && data.songs() != null) {
+                                    currentSongList.addAll(data.songs());
+                                }
+                                showMessage("Found " + currentSongList.size() + " songs");
+                                renderSongs(currentSongList);
+                            } catch (Exception e) {
+                                setLoading(false);
+                                showMessage("Cannot load search results: " + e.getMessage());
+                            } finally {
+                                setLoading(false);
                             }
-                            showMessage("Found " + currentSongList.size() + " songs");
-                            renderSongs(currentSongList);
                         });
                     });
 
         } catch (IOException e) {
-
+            setLoading(false);
             showMessage(
                     "Cannot connect to server: "
                             + e.getMessage());
@@ -186,6 +198,7 @@ public class SearchController {
 
         titleLabel.setOnMouseClicked(evenr -> {
             Navigator.openSongDetail(song);
+            // PlayerManager.getInstance().playSong(List.of(song), song);
         });
 
         // ===== ARTIST =====
@@ -255,6 +268,7 @@ public class SearchController {
         });
         playListButton.setOnAction(event -> {
             handleAddToPlaylist(song);
+            event.consume();
         });
         favoriteButton.setOnAction(event -> {
             handlleAddToFavorite(song);
@@ -269,10 +283,10 @@ public class SearchController {
     }
 
     private void handleAddToPlaylist(SongData song) {
-
-        AddSongToPlaylistDialog.show(searchResultsList.getScene().getWindow(), song, () -> {
-            System.out.println("Thêm bài hát vào playlist thành công!");
-        });
+        if (song == null || searchResultsList.getScene() == null) {
+            return;
+        }
+        AddSongToPlaylistDialog.show(searchResultsList.getScene().getWindow(), song);
     }
 
     private void handlleAddToFavorite(SongData song) {
@@ -280,13 +294,11 @@ public class SearchController {
         Request request = Request.of(Action.ADD_FAVORITE, payload);
         try {
             ClientConnection.getInstance().send(request, response -> {
-                if (!response.isSuccess()) {
-                    Platform.runLater(() -> {
+                Platform.runLater(() -> {
+                    if (!response.isSuccess()) {
                         StatusDialog.error(resultTitleLabel.getScene().getWindow(), response.getMessage());
                         return;
-                    });
-                }
-                Platform.runLater(() -> {
+                    }
                     StatusDialog.success(resultTitleLabel.getScene().getWindow(), response.getMessage());
                 });
             });

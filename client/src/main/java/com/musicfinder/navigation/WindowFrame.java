@@ -16,6 +16,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -33,6 +35,7 @@ public class WindowFrame extends BorderPane {
     private static final String ICON_CLOSE = "M6 6l12 12 M18 6L6 18";
 
     private final Stage stage;
+    private final StackPane contentPane = new StackPane();
     private final SVGPath maximizeIcon = new SVGPath();
 
     // Vị trí kéo
@@ -47,15 +50,24 @@ public class WindowFrame extends BorderPane {
         this.stage = stage;
         getStyleClass().add("window-frame");
         getStylesheets().add(MainApp.class.getResource("/com/musicfinder/css/window-frame.css").toExternalForm());
-        setTop(createTitleBar());
+        // Giữ nội dung (đặc biệt các hình trang trí ở login) trong vùng bên dưới title bar.
+        contentPane.setMinSize(0, 0);
+        Rectangle contentClip = new Rectangle();
+        contentClip.widthProperty().bind(contentPane.widthProperty());
+        contentClip.heightProperty().bind(contentPane.heightProperty());
+        contentPane.setClip(contentClip);
+        setCenter(contentPane);
+        HBox titleBar = createTitleBar();
+        titleBar.setViewOrder(-1);
+        setTop(titleBar);
     }
 
     public void setContent(Parent content) {
-        setCenter(content);
+        contentPane.getChildren().setAll(content);
     }
 
     public Parent getContent() {
-        return (Parent) getCenter();
+        return contentPane.getChildren().isEmpty() ? null : (Parent) contentPane.getChildren().get(0);
     }
 
     // ===================== Thanh tiêu đề =====================
@@ -84,13 +96,20 @@ public class WindowFrame extends BorderPane {
         bar.setPadding(new Insets(0, 0, 0, 14));
         bar.setMinHeight(32);
         bar.setPrefHeight(32);
+        bar.setMaxHeight(32);
 
         // Kéo để di chuyển cửa sổ
         bar.setOnMousePressed(e -> {
+            if (e.getButton() != MouseButton.PRIMARY) {
+                return;
+            }
             dragOffsetX = e.getScreenX() - stage.getX();
             dragOffsetY = e.getScreenY() - stage.getY();
         });
         bar.setOnMouseDragged(e -> {
+            if (!e.isPrimaryButtonDown()) {
+                return;
+            }
             if (maximized) {
                 // Đang phóng to mà kéo -> khôi phục kích thước cũ, giữ con trỏ ở vị trí tương ứng
                 double ratio = dragOffsetX / stage.getWidth();
@@ -124,7 +143,9 @@ public class WindowFrame extends BorderPane {
         button.setGraphic(graphic);
         button.getStyleClass().addAll(styleClasses);
         button.setFocusTraversable(false);
-        // Không để nút "nuốt" thao tác kéo/double-click của thanh tiêu đề
+        // Nút vẫn xử lý action, nhưng không truyền thao tác kéo lên title bar.
+        button.setOnMousePressed(e -> e.consume());
+        button.setOnMouseDragged(e -> e.consume());
         button.setOnMouseClicked(e -> e.consume());
         return button;
     }

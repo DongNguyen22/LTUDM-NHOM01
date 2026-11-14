@@ -2,6 +2,7 @@ package com.musicfinder.navigation;
 
 public enum Screen {
     LOGIN("/com/musicfinder/login-view.fxml", "Music Finder - Login", "Login", 1000, 680),
+    FORGOT_PASSWORD("/com/musicfinder/forgot-password-view.fxml", "Music Finder - Forgot Password", "Forgot Password", 1100, 720),
     REGISTER("/com/musicfinder/register-view.fxml", "Music Finder - Register", "Register", 1000, 680),
     SONG_DETAIL("/com/musicfinder/song-detail-content.fxml", "Music Finder - Song Detail", "Song Detail", 1100, 720),
     HOME("/com/musicfinder/home-content.fxml", "Music Finder - Home", "Discover", 1100, 720),
