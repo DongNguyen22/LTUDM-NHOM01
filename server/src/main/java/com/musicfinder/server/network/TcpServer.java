@@ -1,30 +1,28 @@
 package com.musicfinder.server.network;
 
 import com.musicfinder.server.handler.RequestDispatcher;
-import com.musicfinder.shared.enums.Status;
-import com.musicfinder.shared.response.Response;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class TcpServer {
+    private final PrivateKey privateKey;
     private final int port;
     private final RequestDispatcher dispatcher;
     private final ThreadPoolExecutor executor;
     private ServerSocket serverSocket;
     private volatile boolean running = true;
 
-    public TcpServer(int port, RequestDispatcher dispatcher, int corePoolSize, int maxPoolSize) {
+    public TcpServer(int port, RequestDispatcher dispatcher, PrivateKey privateKey, int corePoolSize, int maxPoolSize) {
         this.port = port;
         this.dispatcher = dispatcher;
+        this.privateKey = privateKey;
         this.executor = new ThreadPoolExecutor(
                 corePoolSize,
                 maxPoolSize,
@@ -42,7 +40,7 @@ public class TcpServer {
                 Socket client = server.accept();
                 System.out.println("Client " + client.getRemoteSocketAddress() + " đã kết nối!");
                 try {
-                    executor.execute(new ClientHandler(client, dispatcher));
+                    executor.execute(new ClientHandler(client, dispatcher, privateKey));
                 } catch (RejectedExecutionException e) {
                     refuse(client); // đã hết thread
                 }
@@ -54,20 +52,11 @@ public class TcpServer {
         }
     }
 
-    // Báo cho client biết server đang bận rồi đóng kết nối
     private void refuse(Socket client) {
-        try (PrintWriter writer = new PrintWriter(
-                new OutputStreamWriter(client.getOutputStream(), StandardCharsets.UTF_8), true)) {
-            Response res = new Response();
-            res.status = Status.SERVER_ERROR;
-            res.message = "Server đang quá tải, vui lòng thử lại sau";
-            writer.println(res.toJson());
+        System.out.println("Server quá tải, từ chối " + client.getRemoteSocketAddress());
+        try {
+            client.close();
         } catch (IOException ignored) {
-        } finally {
-            try {
-                client.close();
-            } catch (IOException ignored) {
-            }
         }
     }
 
