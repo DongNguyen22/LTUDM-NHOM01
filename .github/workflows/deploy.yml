@@ -40,6 +40,6 @@ jobs:
             cd ~/LTUDM-NHOM01
             git fetch origin
             git reset --hard origin/main
-            mvn clean compile -pl shared,server
+            mvn clean install -DskipTests
             sudo systemctl restart music-server
             sudo systemctl status music-server --no-pager
