@@ -177,6 +177,8 @@ public class YtDlpApi {
     private static void appendBypassArgs(List<String> command) {
         command.add("--js-runtimes");
         command.add("node");
+        command.add("--remote-components");
+        command.add("ejs:github");
         File cookies = new File("tools", "cookies.txt");
         if (!cookies.isFile() || cookies.length() == 0) {
             cookies = new File("tools", "www.youtube.com_cookies.txt");
