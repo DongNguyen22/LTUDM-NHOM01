@@ -3,8 +3,18 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ "main", "master", "feature/server" ]
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - 'pom.xml'
+      - '.github/workflows/deploy.yml'
   pull_request:
     branches: [ "main", "master" ]
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - 'pom.xml'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   build-and-deploy:
@@ -20,13 +30,20 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 1. GitHub Actions gánh việc build trên máy 16GB RAM
+      # 1. Tạo file cấu hình từ GitHub Secret trước khi đóng gói JAR
+      - name: Inject application.properties
+        env:
+          APP_PROPERTIES: ${{ secrets.APPLICATION_PROPERTIES }}
+        run: |
+          mkdir -p server/src/main/resources
+          printf "%s\n" "$APP_PROPERTIES" > server/src/main/resources/application.properties
+
+      # 2. GitHub Actions gánh việc build trên máy 16GB RAM
       - name: Build Fat JAR với Maven
         run: mvn clean package -DskipTests
 
-      # 2. Đẩy file server.jar sang VPS (chỉ chạy khi push lên main/master)
+      # 3. Đẩy file server.jar sang VPS (tự động chạy cả khi push hoặc tạo pull request vào server)
       - name: Copy server.jar lên VPS
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.AZURE_HOST }}
@@ -36,9 +53,8 @@ jobs:
           target: "~/LTUDM-NHOM01/"
           strip_components: 2
 
-      # 3. SSH vào chỉ để restart service (chạy siêu nhẹ, không tốn tài nguyên VPS)
+      # 4. SSH vào restart service
       - name: Restart Server trên VPS
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.AZURE_HOST }}
