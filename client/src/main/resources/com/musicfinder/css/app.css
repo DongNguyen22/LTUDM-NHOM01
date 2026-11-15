@@ -434,3 +434,27 @@
     -fx-padding: 6;
 }
 .volume-slider .thumb:hover { -fx-background-color: #e0c4ff; }
+
+/* Playback seek bar */
+.seek-slider {
+    -fx-padding: 8 0 8 0;
+    -fx-cursor: hand;
+}
+.seek-slider .track {
+    -fx-background-color: #46404d;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4;
+    -fx-pref-height: 4;
+    -fx-padding: 2;
+}
+.seek-slider .thumb {
+    -fx-background-color: #c99eff;
+    -fx-background-insets: 0;
+    -fx-background-radius: 10;
+    -fx-padding: 5;
+    -fx-effect: null;
+}
+.seek-slider:hover .thumb,
+.seek-slider:pressed .thumb {
+    -fx-background-color: #e0c4ff;
+}

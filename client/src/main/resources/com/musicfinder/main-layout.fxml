@@ -151,6 +151,7 @@
                     </HBox>
                     <Separator orientation="VERTICAL" prefHeight="22" styleClass="top-separator"/>
                     <StackPane prefWidth="34" prefHeight="34" maxWidth="34" maxHeight="34" styleClass="avatar-small">
+                        <ImageView fx:id="avatarImageView" fitWidth="34" fitHeight="34" preserveRatio="false" visible="false"/>
                         <Label fx:id="avatarInitialLabel" text="" styleClass="avatar-small-text"/>
                     </StackPane>
                 </HBox>
@@ -236,11 +237,11 @@
 
                         <HBox alignment="CENTER" spacing="10" prefWidth="500">
 
-                            <Label fx:id="currentTimeLabel" text="00:00" styleClass="player-time-label"/>
+                            <Label fx:id="currentTimeLabel" text="00:00" minWidth="44" prefWidth="44" alignment="CENTER" styleClass="player-time-label"/>
 
-                            <Slider fx:id="progressSlider" min="0" max="100" value="0" prefWidth="380" HBox.hgrow="ALWAYS"/>
+                            <Slider fx:id="progressSlider" styleClass="seek-slider" min="0" max="100" value="0" prefWidth="380" HBox.hgrow="ALWAYS"/>
 
-                            <Label fx:id="totalTimeLabel" text="00:00" styleClass="player-time-label"/>
+                            <Label fx:id="totalTimeLabel" text="00:00" minWidth="44" prefWidth="44" alignment="CENTER" styleClass="player-time-label"/>
 
                         </HBox>
 
@@ -264,7 +265,7 @@
                             </graphic>
                         </Button>
                         <Slider fx:id="volumeSlider" min="0" max="100" value="72" prefWidth="110" styleClass="volume-slider"/>
-                        <Label fx:id="volumeLabel" text="72%" minWidth="36" styleClass="player-time-label"/>
+                        <Label fx:id="volumeLabel" text="72%" minWidth="36" prefWidth="44" alignment="CENTER" styleClass="player-time-label"/>
                     </HBox>
 
                 </HBox>
