@@ -45,6 +45,6 @@ jobs:
           username: ${{ secrets.AZURE_USER }}
           password: ${{ secrets.AZURE_PASSWORD }}
           script: |
-            sudo systemctl enable music-server
-            sudo systemctl restart music-server
-            sudo systemctl status music-server --no-pager
+            echo "${{ secrets.AZURE_PASSWORD }}" | sudo -S systemctl enable music-server
+            echo "${{ secrets.AZURE_PASSWORD }}" | sudo -S systemctl restart music-server
+            echo "${{ secrets.AZURE_PASSWORD }}" | sudo -S systemctl status music-server --no-pager
