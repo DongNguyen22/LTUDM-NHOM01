@@ -35,3 +35,4 @@ attacker/
 *.key
 !client/src/main/resources/server_public.key
 *cookies*
+/server/dependency-reduced-pom.xml
