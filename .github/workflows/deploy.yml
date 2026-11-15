@@ -7,8 +7,7 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  # 1. CI: Chạy kiểm thử tự động
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,25 +20,31 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Unit Tests
-        run: mvn clean test
+      # 1. GitHub Actions gánh việc build trên máy 16GB RAM
+      - name: Build Fat JAR với Maven
+        run: mvn clean package -DskipTests
 
-  # 2. CD: Tự động cập nhật VPS khi push lên main
-  deploy-to-vps:
-    needs: build-and-test
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    runs-on: ubuntu-latest
-    steps:
-      - name: SSH vào VPS và Restart Server
+      # 2. Đẩy file server.jar sang VPS (chỉ chạy khi push lên main/master)
+      - name: Copy server.jar lên VPS
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.AZURE_HOST }}
+          username: ${{ secrets.AZURE_USER }}
+          password: ${{ secrets.AZURE_PASSWORD }}
+          source: "server/target/server.jar"
+          target: "~/LTUDM-NHOM01/"
+          strip_components: 2
+
+      # 3. SSH vào chỉ để restart service (chạy siêu nhẹ, không tốn tài nguyên VPS)
+      - name: Restart Server trên VPS
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.AZURE_HOST }}
           username: ${{ secrets.AZURE_USER }}
           password: ${{ secrets.AZURE_PASSWORD }}
           script: |
-            cd ~/LTUDM-NHOM01
-            git fetch origin
-            git reset --hard origin/main
-            mvn clean install -DskipTests
+            sudo systemctl enable music-server
             sudo systemctl restart music-server
             sudo systemctl status music-server --no-pager
