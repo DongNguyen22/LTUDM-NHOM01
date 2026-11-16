@@ -179,6 +179,9 @@ public class YtDlpApi {
         if (customNode.isFile()) {
             command.add("--js-runtimes");
             command.add("node:" + customNode.getAbsolutePath());
+        } else if (System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows")) {
+            command.add("--js-runtimes");
+            command.add("node");
         }
         command.add("--remote-components");
         command.add("ejs:github");
