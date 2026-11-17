@@ -122,7 +122,7 @@ public class AuthService {
             user.setEmail(newEmail);
         }
         if (payload.avatarUrl() != null && !payload.avatarUrl().isBlank()) {
-            user.setAvatarUrl(saveAvatar(payload.avatarUrl()));
+            user.setAvatarUrl(saveAvatar(user.getUserId(), payload.avatarUrl()));
         }
         userRepository.update(user);
         return DtoMapper.toUserData(user);
@@ -162,7 +162,8 @@ public class AuthService {
     }
 
     // Save avatar
-    private String saveAvatar(String avatarData) {
+     
+    private String saveAvatar(Long userId, String avatarData) {
         String trimmed = avatarData.trim();
         // Nếu client gửi URL thường (không phải Base64) -> giữ nguyên
         if (!trimmed.startsWith("data:image/")) {
@@ -177,7 +178,7 @@ public class AuthService {
             String header = trimmed.substring(0, commaIndex).toLowerCase();
             String base64Payload = trimmed.substring(commaIndex + 1);
 
-            // Xác định extension
+            // Xác định phần mở rộng file (.png, .jpg, .webp)
             String extension = ".png";
             if (header.contains("image/jpeg") || header.contains("image/jpg")) {
                 extension = ".jpg";
@@ -200,15 +201,28 @@ public class AuthService {
                 avatarDir.mkdirs();
             }
 
-            // Tên file UUID ngẫu nhiên để không bao giờ trùng và chống ghi đè bậy
-            String fileName = "avatar_" + UUID.randomUUID().toString().replace("-", "") + extension;
+            // 1. Tên file CỐ ĐỊNH theo User ID: avatar_user_1.png
+            String fileName = "avatar_user_" + userId + extension;
+
+            // 2. Dọn file avatar cũ cùng user nếu khác định dạng (vd: trước là .jpg, nay up .png)
+            File[] oldFiles = avatarDir.listFiles((dir, name) ->
+                    name.startsWith("avatar_user_" + userId + ".") && !name.equals(fileName));
+            if (oldFiles != null) {
+                for (File old : oldFiles) {
+                    if (old.delete()) {
+                        log.info("Đã xóa file avatar định dạng cũ: {}", old.getName());
+                    }
+                }
+            }
+
+            // 3. Ghi đè file vật lý (nếu cùng tên sẽ tự động ghi đè, không tạo file mới)
             File targetFile = new File(avatarDir, fileName);
             Files.write(targetFile.toPath(), imageBytes);
+            log.info("Đã lưu avatar cho user [{}]: {}", userId, targetFile.getAbsolutePath());
 
-            log.info("Đã lưu ảnh avatar mới: {}", targetFile.getAbsolutePath());
-            // Trả về link HTTP từ AudioStreamServer
-            // (http://127.0.0.1:8088/avatar/avatar_xxx.png)
-            return AudioStreamServer.getAvatarUrl(fileName);
+            // 4. Trả về URL có tham số phiên bản ?v=<timestamp> để chống kẹt cache ở Client/Trình duyệt
+            return AudioStreamServer.getAvatarUrl(fileName) + "?v=" + System.currentTimeMillis();
+
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Ảnh đại diện không hợp lệ: " + e.getMessage());
         } catch (IOException e) {
