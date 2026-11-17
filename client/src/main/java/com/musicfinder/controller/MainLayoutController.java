@@ -6,6 +6,11 @@ import com.musicfinder.network.ClientConnection;
 import com.musicfinder.navigation.Screen;
 
 import javafx.application.Platform;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Interpolator;
+import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -17,6 +22,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.Circle;
+import com.musicfinder.shared.enums.Action;
+import com.musicfinder.shared.request.Request;
+import com.musicfinder.shared.response.payload.UserData;
 
 import java.io.IOException;
 import java.util.EnumMap;
@@ -40,6 +49,11 @@ public class MainLayoutController implements PlayerListener {
 
     @FXML
     private Label avatarInitialLabel;
+
+    @FXML
+    private ImageView avatarImageView;
+
+    private Image pendingAvatarImage;
 
     @FXML
     private Label favoriteCountLabel;
@@ -97,6 +111,8 @@ public class MainLayoutController implements PlayerListener {
     private Label totalTimeLabel;
 
     private boolean userSeeking = false;
+    private final Timeline seekAnimation = new Timeline();
+    private double songDurationSeconds;
 
     // Âm lượng
     private static final String ICON_VOLUME_HIGH = "M11 5L6 9H2v6h4l5 4V5z M15.5 8.5a5 5 0 0 1 0 7 M19 5a10 10 0 0 1 0 14";
@@ -136,6 +152,7 @@ public class MainLayoutController implements PlayerListener {
 
         progressSlider.setOnMousePressed(event -> {
             userSeeking = true;
+            seekAnimation.stop();
         });
 
         progressSlider.setOnMouseReleased(event -> {
@@ -145,7 +162,34 @@ public class MainLayoutController implements PlayerListener {
                     .seek(progressSlider.getValue());
         });
 
+        progressSlider.setBlockIncrement(1);
+        progressSlider.valueProperty().addListener((obs, oldValue, newValue) -> {
+            updateSeekTrack();
+            if (userSeeking && songDurationSeconds > 0) {
+                currentTimeLabel.setText(formatTime(songDurationSeconds * newValue.doubleValue() / 100));
+            }
+        });
+        progressSlider.skinProperty().addListener((obs, oldSkin, newSkin) ->
+                Platform.runLater(this::updateSeekTrack));
+        progressSlider.setOnKeyPressed(event -> {
+            switch (event.getCode()) {
+                case LEFT, RIGHT, HOME, END -> {
+                    userSeeking = true;
+                    seekAnimation.stop();
+                }
+                default -> { }
+            }
+        });
+        progressSlider.setOnKeyReleased(event -> {
+            if (userSeeking) {
+                userSeeking = false;
+                PlayerManager.getInstance().seek(progressSlider.getValue());
+            }
+        });
         setupVolume();
+        avatarImageView.setClip(new Circle(17, 17, 17));
+        loadDefaultAvatar();
+        loadUserAvatar();
     }
 
     // ===================== Âm lượng =====================
@@ -206,6 +250,9 @@ public class MainLayoutController implements PlayerListener {
 
         Parent content = loader.load();
         Object controller = loader.getController();
+        if (controller instanceof ProfileController profileController) {
+            profileController.setOnProfileUpdated(this::updateUserAvatar);
+        }
         if (controller instanceof ForgotPasswordController) {
 
             SearchController searchController = (SearchController) controller;
@@ -227,6 +274,9 @@ public class MainLayoutController implements PlayerListener {
 
         Parent content = loader.load();
         Object controller = loader.getController();
+        if (controller instanceof ProfileController profileController) {
+            profileController.setOnProfileUpdated(this::updateUserAvatar);
+        }
         if (controller instanceof ForgotPasswordController) {
 
             SearchController searchController = (SearchController) controller;
@@ -305,6 +355,64 @@ public class MainLayoutController implements PlayerListener {
         serverStatusLabel.setText(connected ? "Server Connected" : "Server Disconnected");
     }
 
+    private void loadUserAvatar() {
+        try {
+            ClientConnection.getInstance().send(Request.of(Action.GET_PROFILE, null), response -> {
+                if (response.isSuccess()) {
+                    UserData user = response.dataAs(UserData.class);
+                    Platform.runLater(() -> updateUserAvatar(user));
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateUserAvatar(UserData user) {
+        if (user == null) {
+            return;
+        }
+        String name = user.fullName() == null || user.fullName().isBlank()
+                ? user.userName() : user.fullName();
+        setAvatarInitials(name == null || name.isBlank() ? "" : name.strip().substring(0, 1)
+                .toUpperCase(java.util.Locale.ROOT));
+        loadDefaultAvatar();
+        if (user.avatarUrl() == null || user.avatarUrl().isBlank()) {
+            return;
+        }
+        try {
+            Image image = new Image(user.avatarUrl().trim(), true);
+            pendingAvatarImage = image;
+            Runnable updateVisibility = () -> {
+                if (pendingAvatarImage == image) {
+                    boolean loaded = !image.isError() && image.getProgress() >= 1;
+                    if (image.isError()) {
+                        loadDefaultAvatar();
+                    } else if (loaded) {
+                        avatarImageView.setImage(image);
+                        avatarImageView.setVisible(true);
+                        avatarInitialLabel.setVisible(false);
+                    }
+                }
+            };
+            image.progressProperty().addListener((obs, oldValue, newValue) -> updateVisibility.run());
+            image.errorProperty().addListener((obs, oldValue, newValue) -> updateVisibility.run());
+            updateVisibility.run();
+        } catch (IllegalArgumentException e) {
+            loadDefaultAvatar();
+        }
+    }
+
+    private void loadDefaultAvatar() {
+        pendingAvatarImage = null;
+        java.net.URL resource = getClass().getResource("/com/musicfinder/assets/minion.jpg");
+        Image image = resource == null ? null : new Image(resource.toExternalForm());
+        boolean available = image != null && !image.isError();
+        avatarImageView.setImage(available ? image : null);
+        avatarImageView.setVisible(available);
+        avatarInitialLabel.setVisible(!available);
+    }
+
     public void setAvatarInitials(String initials) {
         avatarInitialLabel.setText(initials == null ? "" : initials);
     }
@@ -350,6 +458,11 @@ public class MainLayoutController implements PlayerListener {
 
     @Override
     public void onSongChanged(SongData song) {
+        seekAnimation.stop();
+        songDurationSeconds = 0;
+        progressSlider.setValue(0);
+        currentTimeLabel.setText("00:00");
+        totalTimeLabel.setText("00:00");
 
         String artists = song.artistNames() == null ? "Unknown artist"
                 : String.join(", ", song.artistNames());
@@ -380,24 +493,31 @@ public class MainLayoutController implements PlayerListener {
             double currentSeconds,
             double totalSeconds) {
 
-        if (totalSeconds <= 0) {
+        if (!Double.isFinite(totalSeconds) || !Double.isFinite(currentSeconds) || totalSeconds <= 0) {
             return;
         }
-
-        if (!userSeeking) {
-
-            double percent = currentSeconds
-                    / totalSeconds
-                    * 100;
-
-            progressSlider.setValue(percent);
+        songDurationSeconds = totalSeconds;
+        totalTimeLabel.setText(formatTime(totalSeconds));
+        if (userSeeking) {
+            return;
         }
+        double percent = Math.max(0, Math.min(100, currentSeconds / totalSeconds * 100));
+        seekAnimation.stop();
+        if (Math.abs(progressSlider.getValue() - percent) > 2) {
+            progressSlider.setValue(percent);
+        } else {
+            seekAnimation.getKeyFrames().setAll(new KeyFrame(Duration.millis(180),
+                    new KeyValue(progressSlider.valueProperty(), percent, Interpolator.LINEAR)));
+            seekAnimation.play();
+        }
+        currentTimeLabel.setText(formatTime(currentSeconds));
+    }
 
-        currentTimeLabel.setText(
-                formatTime(currentSeconds));
-
-        totalTimeLabel.setText(
-                formatTime(totalSeconds));
+    private void updateSeekTrack() {
+        double percent = Math.max(0, Math.min(100, progressSlider.getValue()));
+        progressSlider.lookupAll(".track").forEach(track -> track.setStyle(
+                "-fx-background-color: linear-gradient(to right, #c99eff 0%, #c99eff "
+                        + percent + "%, #46404d " + percent + "%, #46404d 100%);"));
     }
 
     private String formatTime(double seconds) {

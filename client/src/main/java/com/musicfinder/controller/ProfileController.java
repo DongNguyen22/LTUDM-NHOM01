@@ -14,13 +14,13 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.stage.FileChooser;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Locale;
-import java.util.UUID;
+import java.util.Base64;
 import java.util.function.Consumer;
 
 public class ProfileController {
@@ -35,10 +35,15 @@ public class ProfileController {
     @FXML
     private Button editProfileButton, saveChangesButton;
     private UserData userData;
+    private Consumer<UserData> onProfileUpdated;
+
+    public void setOnProfileUpdated(Consumer<UserData> onProfileUpdated) {
+        this.onProfileUpdated = onProfileUpdated;
+    }
     private boolean savingProfile;
     private boolean editingProfile = false;
     private boolean changingPassword;
-    private String chooseAvatarUrl;
+    private String selectedAvatarBase64;
     @FXML
     private Button chooseAvatar;
 
@@ -95,7 +100,11 @@ public class ProfileController {
             return;
         }
         try {
-            Image image = new Image(avatarUrl.trim(), true);
+            String value = avatarUrl.trim();
+            Image image = value.startsWith("data:image/")
+                    ? new Image(new ByteArrayInputStream(Base64.getDecoder().decode(
+                            value.substring(value.indexOf(',') + 1))))
+                    : new Image(value, true);
             avatarImageView.setImage(image);
             avatarInitialsLabel.setVisible(false);
             image.errorProperty().addListener((observable, oldValue, error) -> {
@@ -140,7 +149,7 @@ public class ProfileController {
         }
 
         editingProfile = !editingProfile;
-        chooseAvatarUrl = null;
+        selectedAvatarBase64 = null;
         setEditingProfile(editingProfile);
 
         if (!editingProfile) {
@@ -150,10 +159,10 @@ public class ProfileController {
 
     @FXML
     private void handleChooseAvatar() {
-        String selectedUrl = chooseAvatar();
-        if (selectedUrl != null) {
-            chooseAvatarUrl = selectedUrl;
-            loadImage(chooseAvatarUrl);
+        String avatarBase64 = chooseAvatar();
+        if (avatarBase64 != null) {
+            selectedAvatarBase64 = avatarBase64;
+            loadImage(selectedAvatarBase64);
             showMessage("");
         }
     }
@@ -175,35 +184,25 @@ public class ProfileController {
                 return null;
             }
 
-            Path directory = Path.of("").toAbsolutePath().normalize();
-            Path assetsDirectory = null;
-            while (directory != null) {
-                Path clientDirectory = directory.getFileName() != null
-                        && directory.getFileName().toString().equals("client")
-                                ? directory
-                                : directory.resolve("client");
-                Path resources = clientDirectory.resolve("src/main/resources/com/musicfinder");
-                if (Files.isDirectory(resources)) {
-                    assetsDirectory = resources.resolve("assets");
-                    break;
-                }
-                directory = directory.getParent();
+            if (Files.size(selectedFile.toPath()) > 5 * 1024 * 1024) {
+                showMessage("Dung lượng ảnh vượt quá 5MB.");
+                return null;
             }
-            if (assetsDirectory == null) {
-                throw new IOException("Không tìm thấy thư mục resources của client.");
+            byte[] imageBytes = Files.readAllBytes(selectedFile.toPath());
+            String fileName = selectedFile.getName().toLowerCase(Locale.ROOT);
+            String mimeType;
+            if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+                mimeType = "image/jpeg";
+            } else if (fileName.endsWith(".gif")) {
+                mimeType = "image/gif";
+            } else if (fileName.endsWith(".bmp")) {
+                mimeType = "image/bmp";
+            } else {
+                mimeType = "image/png";
             }
-
-            Files.createDirectories(assetsDirectory);
-            String fileName = selectedFile.getName();
-            int extensionIndex = fileName.lastIndexOf('.');
-            String extension = extensionIndex >= 0
-                    ? fileName.substring(extensionIndex).toLowerCase(Locale.ROOT)
-                    : ".png";
-            Path destination = assetsDirectory.resolve("avatar-" + UUID.randomUUID() + extension);
-            Files.copy(selectedFile.toPath(), destination);
-            return destination.toUri().toString();
+            return "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(imageBytes);
         } catch (IOException | IllegalArgumentException | SecurityException e) {
-            showMessage("Không thể lưu ảnh đại diện: " + e.getMessage());
+            showMessage("Không thể đọc ảnh đại diện: " + e.getMessage());
             return null;
         }
     }
@@ -249,7 +248,7 @@ public class ProfileController {
             StatusDialog.error(fullNameField.getScene().getWindow(), "Định dạng email chưa đúng! xxx@gmail.com");
         }
         EditProfilePayload payload = new EditProfilePayload(fullName, email,
-                chooseAvatarUrl == null ? userData.avatarUrl() : chooseAvatarUrl);
+                selectedAvatarBase64 == null ? userData.avatarUrl() : selectedAvatarBase64);
         Request request = Request.of(Action.UPDATE_PROFILE, payload);
         saveChangesButton.setDisable(false);
         try {
@@ -266,6 +265,9 @@ public class ProfileController {
                             return;
                         }
                         userData = updatedUser;
+                        if (onProfileUpdated != null) {
+                            onProfileUpdated.accept(updatedUser);
+                        }
                         showInfo();
                         editingProfile = false;
                         setEditingProfile(editingProfile);
