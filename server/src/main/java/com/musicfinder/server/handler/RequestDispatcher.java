@@ -27,6 +27,7 @@ import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
 import com.musicfinder.server.service.HistoryService;
 import com.musicfinder.server.service.PlayListService;
+import com.musicfinder.server.service.RecommendationService;
 import com.musicfinder.server.service.SearchService;
 import com.musicfinder.server.service.StatisticsService;
 import com.musicfinder.server.service.VideoService;
@@ -80,6 +81,7 @@ public class RequestDispatcher {
     private final LyricService lyricService;
     private final CacheService cacheService = new CacheService();
     private final OtpService otpService = new OtpService();
+    private final RecommendationService recommendationService = new RecommendationService();
 
     public RequestDispatcher() {
         this(new YtDlpApi());
@@ -174,11 +176,34 @@ public class RequestDispatcher {
                 }
 
                 // ===== Thống kê =====
-                case GET_TOP_SONGS:
-                    return Response.success(request, statisticsService.getTopSongs(readLimit(request)));
+                case GET_TOP_SONGS: {
+                    int topLimit = readLimit(request);
+                    String cacheKey = "top" + topLimit;
+                    SearchSongData topSongs = cacheService.getValue(cacheKey, "TOP_SONGS", SearchSongData.class);
+                    if (topSongs == null) {
+                        topSongs = statisticsService.getTopSongs(topLimit);
+                        cacheService.putValue(cacheKey, "TOP_SONGS", topSongs, 300);
+                        System.out.println("TOP_SONGS: cache MISS, đọc từ DB");
+                    } else {
+                        System.out.println("TOP_SONGS: cache HIT");
+                    }
+                    return Response.success(request, topSongs);
+                }
 
-                case GET_TOP_ARTISTS:
-                    return Response.success(request, statisticsService.getTopArtists(readLimit(request)));
+                case GET_TOP_ARTISTS: {
+                    int topLimit = readLimit(request);
+                    String cacheKey = "top" + topLimit;
+                    SearchArtistData topArtists = cacheService.getValue(cacheKey, "TOP_ARTISTS",
+                            SearchArtistData.class);
+                    if (topArtists == null) {
+                        topArtists = statisticsService.getTopArtists(topLimit);
+                        cacheService.putValue(cacheKey, "TOP_ARTISTS", topArtists, 300);
+                        System.out.println("TOP_ARTISTS: cache MISS, đọc từ DB");
+                    } else {
+                        System.out.println("TOP_ARTISTS: cache HIT");
+                    }
+                    return Response.success(request, topArtists);
+                }
 
                 case GET_TOP_KEYWORDS: {
                     String type = null;
@@ -194,6 +219,9 @@ public class RequestDispatcher {
                     GetTopSearchData data = new GetTopSearchData(keyword, type);
                     return Response.success(request, data);
                 }
+
+                case GET_RECOMMENDATIONS:
+                    return Response.success(request, recommendationService.recommend(userId));
 
                 // ===== Ca sĩ =====
                 case VIEW_ARTIST_DETAIL: {
@@ -240,6 +268,14 @@ public class RequestDispatcher {
                     }
                     historyService.clearHistory(userId);
                     return Response.success(request, null);
+
+                case GET_RECENT_SEARCHES: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    List<HistoryData> recent = historyService.getRecent(userId, readLimit(request));
+                    return Response.success(request, new GetHistorysData(recent));
+                }
 
                 // ========================SEARCH=========================
                 case SEARCH_SONG: {
@@ -381,9 +417,6 @@ public class RequestDispatcher {
                     return removed ? Response.success(request, "Đã xoá bài hát thành công")
                             : Response.error(request, Status.ERROR, "Xoá thất bại");
                 }
-
-                // Các action khác sẽ thêm dần ở đây:
-                // case SEARCH_SONG: return searchHandler.searchSong(request);
 
                 default:
                     return Response.error(request, Status.INVALID_REQUEST,

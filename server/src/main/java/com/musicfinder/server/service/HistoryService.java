@@ -12,11 +12,10 @@ import com.musicfinder.shared.response.payload.HistoryData;
 public class HistoryService {
     private static final int MAX_KEYWORD_LENGTH = 255;
     private static final int HISTORY_LIMIT = 20;
+    private static final int RECENT_DEFAULT = 4;
 
     private final SearchHistoryRepository historyRepo = new SearchHistoryRepository();
 
-    // GET_HISTORY: lịch sử của user, mới nhất ở trên cùng (repository đã ORDER BY
-    // searched_at DESC)
     public List<HistoryData> getHistory(Long userId) {
         List<SearchHistory> histories = historyRepo.findByUserId(userId, HISTORY_LIMIT);
 
@@ -32,8 +31,6 @@ public class HistoryService {
         return result;
     }
 
-    // REMOVE_ROW_HISTORY: xóa 1 dòng. Trả false nếu không có dòng đó hoặc dòng đó
-    // không thuộc user này
     public boolean removeRow(Long userId, Long historyId) {
         if (historyId == null || historyId <= 0) {
             throw new IllegalArgumentException("ID lịch sử không hợp lệ");
@@ -41,14 +38,10 @@ public class HistoryService {
         return historyRepo.deleteById(historyId, userId);
     }
 
-    // CLEAR_HISTORY: xóa toàn bộ lịch sử của user (không có gì để xóa cũng không
-    // sao)
     public void clearHistory(Long userId) {
         historyRepo.deleteByUserId(userId);
     }
 
-    // Ghi 1 lượt tìm kiếm. SearchService sẽ gọi hàm này sau mỗi lần SEARCH_SONG /
-    // SEARCH_ARTIST
     public void recordSearch(Long userId, String keyword, String searchType, int resultCount) {
         if (userId == null || userId <= 0) {
             throw new IllegalArgumentException("ID người dùng không hợp lệ");
@@ -82,5 +75,19 @@ public class HistoryService {
                 .build();
 
         historyRepo.save(history);
+    }
+
+    public List<HistoryData> getRecent(Long userId, int limit) {
+        int safeLimit = (limit <= 0 || limit > 10) ? RECENT_DEFAULT : limit;
+        List<HistoryData> result = new ArrayList<>();
+        for (SearchHistory h : historyRepo.findRecentDistinct(userId, safeLimit)) {
+            result.add(new HistoryData(
+                    h.getHistoryId(),
+                    h.getKeyword(),
+                    h.getSearchType(),
+                    h.getResultCount(),
+                    h.getSearchedAt() != null ? h.getSearchedAt().toLocalDate() : null));
+        }
+        return result;
     }
 }
