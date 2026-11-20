@@ -143,4 +143,27 @@ public class SearchHistoryRepository {
             throw new DataException("Lỗi truy vấn lịch sử tìm kiếm theo user_id " + userId, e);
         }
     }
+
+    public List<SearchHistory> findRecentDistinct(Long userId, int limit) {
+        List<SearchHistory> list = new ArrayList<>();
+        String sql = "SELECT * FROM ("
+                + " SELECT DISTINCT ON (normalized_keyword, search_type) * "
+                + " FROM SEARCH_HISTORY WHERE user_id = ? "
+                + " ORDER BY normalized_keyword, search_type, searched_at DESC"
+                + ") t ORDER BY searched_at DESC LIMIT ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, userId);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapResultSetToSearchHistory(rs));
+                }
+            }
+            return list;
+        } catch (SQLException e) {
+            log.error("Lỗi lấy lịch sử gần nhất của user [{}]: {}", userId, e.getMessage(), e);
+            throw new DataException("Lỗi lấy lịch sử gần nhất", e);
+        }
+    }
 }

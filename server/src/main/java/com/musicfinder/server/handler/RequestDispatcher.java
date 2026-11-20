@@ -241,6 +241,14 @@ public class RequestDispatcher {
                     historyService.clearHistory(userId);
                     return Response.success(request, null);
 
+                case GET_RECENT_SEARCHES: {
+                    if (userId == null) {
+                        return Response.error(request, Status.UNAUTHORIZED, "Bạn chưa đăng nhập");
+                    }
+                    List<HistoryData> recent = historyService.getRecent(userId, readLimit(request));
+                    return Response.success(request, new GetHistorysData(recent));
+                }
+
                 // ========================SEARCH=========================
                 case SEARCH_SONG: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
