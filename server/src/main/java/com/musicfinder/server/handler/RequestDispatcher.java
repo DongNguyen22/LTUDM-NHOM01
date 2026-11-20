@@ -27,6 +27,7 @@ import com.musicfinder.server.service.ArtistService;
 import com.musicfinder.server.service.AuthService;
 import com.musicfinder.server.service.HistoryService;
 import com.musicfinder.server.service.PlayListService;
+import com.musicfinder.server.service.RecommendationService;
 import com.musicfinder.server.service.SearchService;
 import com.musicfinder.server.service.StatisticsService;
 import com.musicfinder.server.service.VideoService;
@@ -80,6 +81,7 @@ public class RequestDispatcher {
     private final LyricService lyricService;
     private final CacheService cacheService = new CacheService();
     private final OtpService otpService = new OtpService();
+    private final RecommendationService recommendationService = new RecommendationService();
 
     public RequestDispatcher() {
         this(new YtDlpApi());
@@ -217,6 +219,9 @@ public class RequestDispatcher {
                     GetTopSearchData data = new GetTopSearchData(keyword, type);
                     return Response.success(request, data);
                 }
+
+                case GET_RECOMMENDATIONS:
+                    return Response.success(request, recommendationService.recommend(userId));
 
                 // ===== Ca sĩ =====
                 case VIEW_ARTIST_DETAIL: {
