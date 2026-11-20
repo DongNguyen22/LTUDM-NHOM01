@@ -174,11 +174,34 @@ public class RequestDispatcher {
                 }
 
                 // ===== Thống kê =====
-                case GET_TOP_SONGS:
-                    return Response.success(request, statisticsService.getTopSongs(readLimit(request)));
+                case GET_TOP_SONGS: {
+                    int topLimit = readLimit(request);
+                    String cacheKey = "top" + topLimit;
+                    SearchSongData topSongs = cacheService.getValue(cacheKey, "TOP_SONGS", SearchSongData.class);
+                    if (topSongs == null) {
+                        topSongs = statisticsService.getTopSongs(topLimit);
+                        cacheService.putValue(cacheKey, "TOP_SONGS", topSongs, 300);
+                        System.out.println("TOP_SONGS: cache MISS, đọc từ DB");
+                    } else {
+                        System.out.println("TOP_SONGS: cache HIT");
+                    }
+                    return Response.success(request, topSongs);
+                }
 
-                case GET_TOP_ARTISTS:
-                    return Response.success(request, statisticsService.getTopArtists(readLimit(request)));
+                case GET_TOP_ARTISTS: {
+                    int topLimit = readLimit(request);
+                    String cacheKey = "top" + topLimit;
+                    SearchArtistData topArtists = cacheService.getValue(cacheKey, "TOP_ARTISTS",
+                            SearchArtistData.class);
+                    if (topArtists == null) {
+                        topArtists = statisticsService.getTopArtists(topLimit);
+                        cacheService.putValue(cacheKey, "TOP_ARTISTS", topArtists, 300);
+                        System.out.println("TOP_ARTISTS: cache MISS, đọc từ DB");
+                    } else {
+                        System.out.println("TOP_ARTISTS: cache HIT");
+                    }
+                    return Response.success(request, topArtists);
+                }
 
                 case GET_TOP_KEYWORDS: {
                     String type = null;
@@ -389,9 +412,6 @@ public class RequestDispatcher {
                     return removed ? Response.success(request, "Đã xoá bài hát thành công")
                             : Response.error(request, Status.ERROR, "Xoá thất bại");
                 }
-
-                // Các action khác sẽ thêm dần ở đây:
-                // case SEARCH_SONG: return searchHandler.searchSong(request);
 
                 default:
                     return Response.error(request, Status.INVALID_REQUEST,
