@@ -16,7 +16,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.control.TextField?>
 <VBox xmlns="http://javafx.com/javafx/21"
-    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.FavoritesController" spacing="18" styleClass="favorite-page" stylesheets="@css/favorites.css">
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.FavoritesController" spacing="18" styleClass="favorite-page" stylesheets="@../css/favorites.css">
 
     <padding>
         <Insets top="28" right="30" bottom="25" left="30"/>

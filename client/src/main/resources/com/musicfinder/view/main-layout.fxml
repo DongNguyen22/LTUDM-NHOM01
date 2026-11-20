@@ -14,7 +14,7 @@
 <?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.ProgressIndicator?>
 <StackPane xmlns="http://javafx.com/javafx/21"
-    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.MainLayoutController" stylesheets="@css/app.css">
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.MainLayoutController" stylesheets="@../css/app.css">
 
     <HBox styleClass="app-root">
         <VBox prefWidth="208" minWidth="208" maxWidth="208" styleClass="sidebar">
@@ -114,17 +114,6 @@
                 <Label text="Find your next favorite." styleClass="promo-title"/>
                 <Button text="Explore music  →" onAction="#handleSearch" styleClass="promo-link"/>
             </VBox>
-
-            <Button text="Settings" graphicTextGap="12" maxWidth="Infinity" alignment="CENTER_LEFT" onAction="#handleSettings" styleClass="nav-button, bottom-nav">
-                <graphic>
-                    <Group scaleX="0.68" scaleY="0.68">
-                        <SVGPath content="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" styleClass="nav-icon"/>
-                    </Group>
-                </graphic>
-                <VBox.margin>
-                    <Insets top="14"/>
-                </VBox.margin>
-            </Button>
 
             <Button text="Log out" graphicTextGap="12" maxWidth="Infinity" alignment="CENTER_LEFT" onAction="#handleLogout" styleClass="nav-button, bottom-nav">
                 <graphic>

@@ -342,11 +342,6 @@ public class MainLayoutController implements PlayerListener {
     }
 
     @FXML
-    private void handleSettings() {
-        // Settings screen is not implemented yet.
-    }
-
-    @FXML
     private void handleLogout() throws IOException {
         Navigator.goTo(Screen.LOGIN);
     }

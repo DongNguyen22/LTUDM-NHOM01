@@ -303,3 +303,9 @@
 .nav-button.bottom-nav:hover { -fx-background-color: #1b1821; -fx-text-fill: #ffffff; }
 .nav-button.bottom-nav:focused { -fx-background-color: transparent; -fx-background-insets: 0; }
 .nav-button.bottom-nav:hover:focused { -fx-background-color: #1b1821; }
+
+.home-empty { -fx-text-fill: #817a89; -fx-font-size: 11px; -fx-padding: 18 12; }
+.song-card, .artist-card, .popular-row { -fx-cursor: hand; }
+.popular-row:hover, .artist-card:hover { -fx-background-color: #211d29; -fx-background-radius: 10; }
+
+.home-image-placeholder { -fx-background-color: #292333; -fx-background-radius: 6; }

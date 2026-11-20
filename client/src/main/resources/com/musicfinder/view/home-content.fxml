@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<ScrollPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.HomeController" stylesheets="@css/home.css" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" styleClass="content-scroll">
+<ScrollPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.HomeController" stylesheets="@../css/home.css" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" styleClass="content-scroll">
                 <content>
                     <VBox spacing="24" styleClass="page-content">
                         <padding>
@@ -23,17 +23,17 @@
                         </padding>
 
                         <!-- HERO -->
-                        <HBox minHeight="190" prefHeight="190" maxHeight="190" styleClass="hero-card">
+                        <HBox minHeight="250" prefHeight="250" styleClass="hero-card">
                             <padding>
                                 <Insets top="22" right="30" bottom="22" left="34"/>
                             </padding>
                             <VBox spacing="7" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
                                 <Label text="●  FEATURED DISCOVERY" styleClass="hero-badge"/>
-                                <Label text="Feel everything.\nFind your sound." styleClass="hero-heading"/>
+                                <Label text="Feel everything.&#10;Find your sound." styleClass="hero-heading"/>
                                 <Label text="From the songs you know by heart to the ones you haven’t met yet. Your next discovery starts here." wrapText="true" maxWidth="440" styleClass="hero-copy"/>
                                 <Button text="Explore songs  →" onAction="#handleExplore" styleClass="hero-button"/>
                             </VBox>
-                            <StackPane prefWidth="330" minWidth="300" maxHeight="190" styleClass="hero-art-area">
+                            <StackPane prefWidth="330" minWidth="300" maxHeight="250" styleClass="hero-art-area">
                                 <StackPane prefWidth="270" prefHeight="270" maxWidth="270" maxHeight="270" styleClass="vinyl-ring, vinyl-ring-outer"/>
                                 <StackPane prefWidth="210" prefHeight="210" maxWidth="210" maxHeight="210" styleClass="vinyl-ring, vinyl-ring-inner"/>
                                 </StackPane>
@@ -57,8 +57,7 @@
                             <Button text="View history  →" onAction="#handleGoSearchHistory" styleClass="section-link"/>
                         </HBox>
 
-                        <HBox spacing="14">
-                            </HBox>
+                        <HBox fx:id="recentBox" spacing="14"/>
 
                         <!-- POPULAR + ARTISTS -->
                         <HBox spacing="18">
@@ -69,10 +68,9 @@
                                         <Label text="What everyone is looking for" styleClass="section-subtitle"/>
                                     </VBox>
                                     <Region HBox.hgrow="ALWAYS"/>
-                                    <Button text="See all  →" onAction="#handleNavPlaceholder" styleClass="section-link"/>
+                                    <Button text="See all  →" onAction="#handleGoToTrending" styleClass="section-link"/>
                                 </HBox>
-                                <VBox styleClass="popular-list">
-                                    </VBox>
+                                <VBox fx:id="popularBox" styleClass="popular-list"/>
                             </VBox>
 
                             <VBox spacing="10" prefWidth="420" minWidth="360">
@@ -84,8 +82,7 @@
                                     <Region HBox.hgrow="ALWAYS"/>
                                     <Button text="Explore artists  →" onAction="#handleGoToArtists" styleClass="section-link"/>
                                 </HBox>
-                                <HBox spacing="9">
-                                    </HBox>
+                                <HBox fx:id="artistsBox" spacing="9"/>
                             </VBox>
                         </HBox>
 
@@ -99,8 +96,7 @@
                             <Button text="Search more  →" onAction="#handleGoToSearch" styleClass="section-link"/>
                         </HBox>
 
-                        <HBox spacing="14">
-                            </HBox>
+                        <HBox fx:id="recommendedBox" spacing="14"/>
                     </VBox>
                 </content>
             </ScrollPane>

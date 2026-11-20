@@ -3,7 +3,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <StackPane xmlns="http://javafx.com/javafx/21"
-    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.SongDetailController" stylesheets="@css/song-detail.css">
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.musicfinder.controller.SongDetailController" stylesheets="@../css/song-detail.css">
     <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="song-detail">
         <content>
             <VBox spacing="20" styleClass="detail-page">
