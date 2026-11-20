@@ -70,7 +70,7 @@ public final class Navigator {
         }
 
         FXMLLoader loader = new FXMLLoader(
-                MainApp.class.getResource("/com/musicfinder/main-layout.fxml"));
+                MainApp.class.getResource("/com/musicfinder/view/main-layout.fxml"));
 
         mainLayoutRoot = loader.load();
         mainLayoutController = loader.getController();
