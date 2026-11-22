@@ -13,6 +13,7 @@ import com.musicfinder.shared.request.payload.SearchPayload;
 import com.musicfinder.shared.response.payload.SearchSongData;
 import com.musicfinder.shared.response.payload.SongData;
 
+
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -72,13 +73,17 @@ public class SearchController {
 
     private final List<SongData> currentSongList = new ArrayList<>();
 
+    private SearchSuggestDropdown suggestDropdown;
+
     @FXML
     private void initialize() {
         searchMessageLabel.setText("");
+        suggestDropdown = new SearchSuggestDropdown(searchField, keyword -> handleSearch());
     }
 
     @FXML
     private void handleSearch() {
+        suggestDropdown.cancel();
 
         String keyword = searchField.getText() == null
                 ? ""
@@ -312,7 +317,7 @@ public class SearchController {
     }
 
     public void seachFromAnotherScreen(String keyword) {
-        searchField.setText(keyword);
+        suggestDropdown.setTextSilently(keyword);
         handleSearch();
     }
 }

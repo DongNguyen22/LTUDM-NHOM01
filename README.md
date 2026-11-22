@@ -9,7 +9,7 @@ Client giao tiếp với Server qua **TCP Socket**. Toàn bộ xử lý nghiệp
 ```text
 JavaFX Client
      │
-     │ TCP Socket / JSON
+     │ TCP Socket
      ▼
 Java TCP Server
      ├── Authentication
@@ -32,10 +32,10 @@ music-finder-network/
 │           ├── java/
 │           │   └── com/musicfinder/client/
 │           │       ├── controller/
+│           │       ├── navigation/
 │           │       ├── network/
-│           │       ├── service/
-│           │       ├── model/
-│           │       └── util/
+│           │       ├── player/
+│           │       └── MainApp.java
 │           │
 │           └── resources/
 │               ├── view/
@@ -54,13 +54,14 @@ music-finder-network/
 │                   ├── service/
 │                   ├── repository/
 │                   ├── api/
-│                   ├── cache/
+│                   ├── model/
 │                   ├── config/
 │                   └── util/
 │
 ├── shared/
 │   ├── README.md
 │   ├── pom.xml
+│   ├── tools/
 │   └── src/
 │       └── main/
 │           └── java/
@@ -72,16 +73,13 @@ music-finder-network/
 │
 ├── database/
 │   ├── README.md
-│   ├── schema.sql
-│   ├── seed.sql
-│   └── migrations/
+│   ├── music_db.sql
+│  
 │
 ├── docs/
 │   ├── README.md
-│   ├── architecture/
-│   ├── protocol/
-│   ├── database/
-│   └── testing/
+│   ├── erd.png
+│   └── ZING_MP3_API.md
 │
 ├── .gitignore
 ├── pom.xml
@@ -106,19 +104,17 @@ music-finder-network/
 - JavaFX
 - TCP Socket
 - Maven
-- JSON / Jackson
 - PostGreSql
 - JDBC
-- Docker
 - Git & GitHub
 
 ## Phân công
 
-| Thành viên | Vai trò | Phụ trách chính |
-|---|---|---|
-| Đông | Client Lead | JavaFX GUI, Socket Client, Media Player |
-| Đạt | Server Lead | TCP Server, Multi-thread, Authentication, Search/API, Fuzzy Search |
-| Hiệp | Data & Integration Lead | Database, Repository, Playlist/History, Cache/Statistics, Deploy |
+| Thành viên         | MSSV       | Vai trò                         | Phụ trách chính                                                    |
+|--------------------|------------|---------------------------------|--------------------------------------------------------------------|
+| Nguyễn Văn Đông    | 3124410072 | Client Lead                     | JavaFX GUI, Socket Client, Media Player                            |
+| Đỗ Đạt             | 3124410054 | Server Lead+Data                | TCP Server, Multi-thread, Authentication, Search/API, Fuzzy Search |
+| Nguyễn Trường Hiệp | 3124410089 | Data & Integration Lead + Server| Database, Repository, Playlist/History, Cache/Statistics, Deploy   |
 
 ## Nguyên tắc kiến trúc
 
@@ -142,4 +138,4 @@ main
 
 ## Trạng thái
 
-Project đang trong giai đoạn phát triển cho môn **Lập trình mạng**.
+Hoàn thành.
