@@ -17,7 +17,10 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.FlowPane;
@@ -110,6 +113,7 @@ public class MyPlaylistsController {
         StackPane.setAlignment(playButton, Pos.BOTTOM_RIGHT);
         StackPane.setMargin(playButton, new Insets(0, 12, 12, 0));
         cover.getChildren().addAll(artworkIcon, playButton);
+        loadCoverImage(cover, artworkIcon, playlist.thumbnailUrl());
 
         // 3. Phần nội dung
         VBox body = new VBox(6);
@@ -156,6 +160,90 @@ public class MyPlaylistsController {
         card.getChildren().addAll(cover, body);
 
         return card;
+    }
+
+    private static final String DEFAULT_COVER = "/com/musicfinder/assets/cover-blue-flower.png";
+
+    // Phủ ảnh lên cover: dùng thumbnail của playlist, không có / lỗi thì dùng ảnh mặc định
+    private void loadCoverImage(StackPane cover, Label artworkIcon, String thumbnailUrl) {
+        ImageView imageView = new ImageView();
+        imageView.setFitWidth(CARD_WIDTH);
+        imageView.setFitHeight(COVER_HEIGHT);
+        imageView.setPreserveRatio(false);
+        imageView.setSmooth(true);
+        imageView.getStyleClass().add("playlist-cover-image");
+
+        // Bo 2 góc trên cho khớp card; clip cao hơn ảnh để 2 góc dưới vẫn vuông
+        Rectangle clip = new Rectangle(CARD_WIDTH, COVER_HEIGHT + 24);
+        clip.setArcWidth(24);
+        clip.setArcHeight(24);
+        imageView.setClip(clip);
+
+        cover.getChildren().add(0, imageView); // nằm dưới nút play
+        artworkIcon.setVisible(false);
+
+        Image defaultCover = loadDefaultCover();
+        setCoverImage(imageView, defaultCover);
+
+        if (thumbnailUrl == null || thumbnailUrl.isBlank()) {
+            return;
+        }
+        Image image;
+        try {
+            image = new Image(thumbnailUrl.trim(), true); // tải nền, không chặn UI
+        } catch (Exception e) {
+            System.out.println("Cannot load playlist thumbnail: " + thumbnailUrl);
+            return;
+        }
+        if (image.isError()) {
+            return;
+        }
+        // Chỉ thay ảnh mặc định khi thumbnail tải xong thành công
+        Runnable onLoaded = () -> {
+            if (!image.isError()) {
+                setCoverImage(imageView, image);
+            }
+        };
+        if (image.getProgress() >= 1.0) {
+            onLoaded.run();
+        } else {
+            image.progressProperty().addListener((obs, oldV, newV) -> {
+                if (newV.doubleValue() >= 1.0) {
+                    onLoaded.run();
+                }
+            });
+        }
+    }
+
+    private Image loadDefaultCover() {
+        var url = getClass().getResource(DEFAULT_COVER);
+        return url == null ? null : new Image(url.toExternalForm());
+    }
+
+    private void setCoverImage(ImageView view, Image image) {
+        if (image == null) {
+            return;
+        }
+        view.setImage(image);
+        cropToCover(view, image);
+    }
+
+    // Cắt phần giữa ảnh cho đúng tỉ lệ khung cover (giống object-fit: cover) thay vì kéo méo
+    private void cropToCover(ImageView view, Image image) {
+        double w = image.getWidth();
+        double h = image.getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        double frameRatio = CARD_WIDTH / COVER_HEIGHT;
+        double cropW = w;
+        double cropH = h;
+        if (w / h > frameRatio) {
+            cropW = h * frameRatio;
+        } else {
+            cropH = w / frameRatio;
+        }
+        view.setViewport(new Rectangle2D((w - cropW) / 2, (h - cropH) / 2, cropW, cropH));
     }
 
     @FXML

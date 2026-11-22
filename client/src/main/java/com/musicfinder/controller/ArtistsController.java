@@ -58,13 +58,17 @@ public class ArtistsController {
     @FXML
     private VBox artistListBox;
 
+    private SearchSuggestDropdown suggestDropdown;
+
     @FXML
     private void initialize() {
         artistMessageLabel.setText("");
+        suggestDropdown = new SearchSuggestDropdown(artistSearchField, keyword -> handleArtistSearch());
     }
 
     @FXML
     private void handleArtistSearch() {
+        suggestDropdown.cancel();
 
         String keyword = artistSearchField.getText() == null
                 ? ""
@@ -130,7 +134,7 @@ public class ArtistsController {
     }
 
     public void seachFromAnotherScreen(String keyword) {
-        artistSearchField.setText(keyword);
+        suggestDropdown.setTextSilently(keyword);
         handleArtistSearch();
     }
 

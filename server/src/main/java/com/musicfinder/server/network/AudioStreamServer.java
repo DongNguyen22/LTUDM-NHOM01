@@ -50,7 +50,7 @@ public class AudioStreamServer {
 
     private static String baseUrl() {
         int port = Integer.getInteger("music.audio.port", 8088);
-        String base = System.getProperty("music.audio.baseUrl", "http://127.0.0.1:" + port); // http://20.212.10.15:
+        String base = System.getProperty("music.audio.baseUrl", "http://20.212.10.15:" + port); // http://20.212.10.15:
         if (base.endsWith("/"))
             base = base.substring(0, base.length() - 1);
         return base;
