@@ -11,6 +11,7 @@ import com.musicfinder.shared.response.payload.LyricData;
 import com.musicfinder.server.service.LyricService;
 import com.musicfinder.server.service.OtpService;
 import com.musicfinder.shared.response.payload.SongData;
+import com.musicfinder.shared.response.payload.SuggestData;
 import com.musicfinder.shared.response.payload.HistoryData;
 import com.musicfinder.shared.response.payload.KeywordStatisticData;
 import com.musicfinder.shared.response.payload.GetHistorysData;
@@ -320,8 +321,8 @@ public class RequestDispatcher {
                 }
                 case SUGGEST: {
                     SearchPayload payload = request.dataAs(SearchPayload.class);
-                    List<String> suggestions = GoogleSuggestApi.suggest(payload.keyword());
-                    return Response.success(request, suggestions);
+                    SuggestData data = new SuggestData(GoogleSuggestApi.suggest(payload.keyword()));
+                    return Response.success(request, data);
                 }
 
                 // ===============PLAYLIST========================
