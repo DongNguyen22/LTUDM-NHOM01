@@ -119,6 +119,15 @@ public class SearchController {
                                 if (data != null && data.songs() != null) {
                                     currentSongList.addAll(data.songs());
                                 }
+                                
+                                if (currentSongList.isEmpty() && data != null
+                                        && data.suggestions() != null && !data.suggestions().isEmpty()) {
+                                    currentSongList.addAll(data.suggestions());
+                                    showMessage("No songs found for \"" + keyword + "\".");
+                                    renderSuggestions(currentSongList);
+                                    return;
+                                }
+                                resultTitleLabel.setText("Search results");
                                 showMessage("Found " + currentSongList.size() + " songs");
                                 renderSongs(currentSongList);
                             } catch (Exception e) {
@@ -158,6 +167,15 @@ public class SearchController {
             SongData song = songs.get(i);
             HBox row = createSongRow(song, i);
             searchResultsList.getChildren().add(row);
+        }
+    }
+
+    private void renderSuggestions(List<SongData> suggestions) {
+        searchResultsList.getChildren().clear();
+        resultTitleLabel.setText("Did you mean...?");
+        resultSubtitleLabel.setText(suggestions.size() + " similar songs");
+        for (int i = 0; i < suggestions.size(); i++) {
+            searchResultsList.getChildren().add(createSongRow(suggestions.get(i), i));
         }
     }
 

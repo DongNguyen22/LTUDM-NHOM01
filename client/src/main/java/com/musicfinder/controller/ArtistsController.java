@@ -97,6 +97,13 @@ public class ArtistsController {
                     }
                     SearchArtistData data = response.dataAs(SearchArtistData.class);
                     List<ArtistData> artists = (data == null || data.artists() == null) ? List.of() : data.artists();
+                    
+                    if (artists.isEmpty() && data != null
+                            && data.suggestions() != null && !data.suggestions().isEmpty()) {
+                        renderArtists(data.suggestions());
+                        showMessage("Không tìm thấy \"" + keyword + "\". Có phải bạn muốn tìm:");
+                        return;
+                    }
                     renderArtists(artists);
                 } catch (Exception e) {
                     showMessage("Không thể tải kết quả: " + e.getMessage());
