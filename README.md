@@ -113,7 +113,7 @@ music-finder-network/
 | Thành viên         | MSSV       | Vai trò                         | Phụ trách chính                                                    |
 |--------------------|------------|---------------------------------|--------------------------------------------------------------------|
 | Nguyễn Văn Đông    | 3124410072 | Client Lead                     | JavaFX GUI, Socket Client, Media Player                            |
-| Đỗ Đạt             | 3124410054 | Server Lead+Data                | TCP Server, Multi-thread, Authentication, Search/API, Fuzzy Search |
+| Đỗ Đạt             | 3124410054 | Server Lead+Data                | TCP Server, Multi-thread, RSA+AES, Search/Cache, Audio/Video       |
 | Nguyễn Trường Hiệp | 3124410089 | Data & Integration Lead + Server| Database, Repository, Playlist/History, Cache/Statistics, Deploy   |
 
 ## Nguyên tắc kiến trúc
