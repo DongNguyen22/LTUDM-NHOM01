@@ -114,7 +114,7 @@ music-finder-network/
 |--------------------|------------|---------------------------------|--------------------------------------------------------------------|
 | Nguyễn Văn Đông    | 3124410072 | Client Lead                     | JavaFX GUI, Socket Client, Media Player                            |
 | Đỗ Đạt             | 3124410054 | Server Lead+Data                | TCP Server, Multi-thread, RSA+AES, Search/Cache, Audio/Video       |
-| Nguyễn Trường Hiệp | 3124410089 | Data & Integration Lead + Server| Database, Repository, Playlist/History, Cache/Statistics, Deploy   |
+| Nguyễn Trường Hiệp | 3124410089 | Data & Integration Lead + Server| Database, Repository, Playlist/History, Auth/Statistics, Deploy    |
 
 ## Nguyên tắc kiến trúc
 
